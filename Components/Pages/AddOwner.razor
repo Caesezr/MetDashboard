@@ -1,0 +1,349 @@
+﻿@page "/owners/add"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Add Owner</PageTitle>
+
+<RadzenStack Gap="1.5rem"
+             class="form-page">
+
+
+    <!-- =====================================================
+         BACK LINK
+         ===================================================== -->
+
+    <div>
+
+        <RadzenLink Text="Back to Owners"
+                    Icon="arrow_back"
+                    Path="/owners"
+                    class="form-back-link" />
+
+    </div>
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div>
+
+        <div class="management-page-eyebrow">
+            OWNERSHIP MANAGEMENT
+        </div>
+
+        <RadzenText TextStyle="TextStyle.H3"
+                    Style="margin:0;">
+            Add Owner
+        </RadzenText>
+
+        <RadzenText TextStyle="TextStyle.Body1"
+                    Style="margin-top:0.35rem;">
+            Add a new property owner to the management system.
+        </RadzenText>
+
+    </div>
+
+
+    <!-- =====================================================
+         ERROR MESSAGE
+         ===================================================== -->
+    @if (!string.IsNullOrEmpty(saveErrorMessage))
+    {
+        <RadzenCard class="form-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @saveErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+
+
+    <!-- =====================================================
+         FORM
+         ===================================================== -->
+
+    <RadzenCard class="form-card">
+
+        <div class="form-card-header">
+
+            <div>
+
+                <RadzenText TextStyle="TextStyle.H6"
+                            Style="margin:0;">
+                    Owner Details
+                </RadzenText>
+
+                <div class="form-card-description">
+                    Enter the owner's personal, contact and mailing information.
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="form-card-body">
+
+            <RadzenTemplateForm TItem="AddOwnerModel"
+                                Data="@model"
+                                Submit="@SaveOwner">
+
+                <RadzenStack Gap="1.5rem">
+
+
+                    <!-- =====================================
+                         FIRST NAME / LAST NAME
+                         ===================================== -->
+
+                    <div class="form-grid">
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                First Name
+                                <span class="form-required">*</span>
+                            </label>
+
+                            <RadzenTextBox Name="FirstName"
+                                           @bind-Value="@model.FirstName"
+                                           Placeholder="Enter first name"
+                                           Style="width:100%;" />
+
+                            <RadzenRequiredValidator Component="FirstName"
+                                                     Text="First name is required." />
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Last Name
+                                <span class="form-required">*</span>
+                            </label>
+
+                            <RadzenTextBox Name="LastName"
+                                           @bind-Value="@model.LastName"
+                                           Placeholder="Enter last name"
+                                           Style="width:100%;" />
+
+                            <RadzenRequiredValidator Component="LastName"
+                                                     Text="Last name is required." />
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================
+                         EMAIL / PHONE
+                         ===================================== -->
+
+                    <div class="form-grid">
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Email
+                            </label>
+
+                            <RadzenTextBox Name="Email"
+                                           @bind-Value="@model.Email"
+                                           Placeholder="e.g. owner@example.com"
+                                           Style="width:100%;" />
+
+                            <RadzenEmailValidator Component="Email"
+                                                  Text="Please enter a valid email address." />
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Phone
+                            </label>
+
+                            <RadzenTextBox @bind-Value="@model.Phone"
+                                           Placeholder="e.g. 07123 456789"
+                                           Style="width:100%;" />
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================
+                         MAILING ADDRESS
+                         ===================================== -->
+
+                    <div class="form-field">
+
+                        <label class="form-label">
+                            Mailing Address
+                        </label>
+
+                        <RadzenTextBox @bind-Value="@model.MailingAddress"
+                                       Placeholder="Enter mailing address"
+                                       Style="width:100%;" />
+
+                        <div class="form-field-hint">
+                            Enter the owner's preferred correspondence address.
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================
+                         FORM ACTIONS
+                         ===================================== -->
+
+                    <div class="form-actions">
+
+                        <RadzenButton Text="Cancel"
+                                      Icon="close"
+                                      ButtonStyle="ButtonStyle.Light"
+                                      Click="@Cancel" />
+
+                        <RadzenButton Text="Save Owner"
+                                      Icon="save"
+                                      ButtonType="ButtonType.Submit"
+                                      Disabled="@isSaving" />
+
+                    </div>
+
+
+                    @if (isSaving)
+                    {
+                        <div class="form-saving-message">
+
+                            <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                                       Size="ProgressBarCircularSize.Small" />
+
+                            <RadzenText>
+                                Saving owner...
+                            </RadzenText>
+
+                        </div>
+                    }
+
+                </RadzenStack>
+
+            </RadzenTemplateForm>
+
+        </div>
+
+    </RadzenCard>
+
+</RadzenStack>
+
+
+@code
+{
+    private AddOwnerModel model = new();
+
+    private bool isSaving;
+
+    private string? saveErrorMessage;
+
+
+    private async Task SaveOwner(AddOwnerModel value)
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+
+            saveErrorMessage = null;
+
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            var newOwner =
+                new Owner
+                {
+                    FirstName =
+                        value.FirstName.Trim(),
+
+                    LastName =
+                        value.LastName.Trim(),
+
+                    Email =
+                        string.IsNullOrWhiteSpace(value.Email)
+                            ? null
+                            : value.Email.Trim(),
+
+                    Phone =
+                        string.IsNullOrWhiteSpace(value.Phone)
+                            ? null
+                            : value.Phone.Trim(),
+
+                    MailingAddress =
+                        string.IsNullOrWhiteSpace(value.MailingAddress)
+                            ? null
+                            : value.MailingAddress.Trim()
+                };
+
+
+            db.Owners.Add(newOwner);
+
+            await db.SaveChangesAsync();
+
+
+            Navigation.NavigateTo("/owners");
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage =
+                "The owner could not be saved. Please try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/owners");
+    }
+
+
+    private sealed class AddOwnerModel
+    {
+        public string FirstName { get; set; } = "";
+
+        public string LastName { get; set; } = "";
+
+        public string? Email { get; set; }
+
+        public string? Phone { get; set; }
+
+        public string? MailingAddress { get; set; }
+    }
+}

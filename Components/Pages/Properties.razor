@@ -1,0 +1,564 @@
+﻿@page "/properties"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+
+<PageTitle>Properties</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div class="management-page-header">
+
+        <div>
+
+            <div class="management-page-eyebrow">
+                PROPERTY PORTFOLIO
+            </div>
+
+            <RadzenText TextStyle="TextStyle.H3"
+                        Style="margin:0;">
+                Properties
+            </RadzenText>
+
+            <RadzenText TextStyle="TextStyle.Body1"
+                        Style="margin-top:0.35rem;">
+                View and manage the property portfolio.
+            </RadzenText>
+
+        </div>
+
+
+        <div class="management-page-actions">
+
+            <RadzenLink Text="Add Property"
+                        Icon="add"
+                        Path="/properties/add" />
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         ACTION MESSAGE
+         ===================================================== -->
+    @if (!string.IsNullOrEmpty(actionMessage))
+    {
+        <RadzenCard class="management-message-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="info"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @actionMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+
+
+    <!-- =====================================================
+         OPERATION ERROR
+         ===================================================== -->
+    @if (!string.IsNullOrEmpty(operationErrorMessage))
+    {
+        <RadzenCard class="management-operation-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @operationErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+
+
+    <!-- =====================================================
+         LOADING / LOAD ERROR
+         ===================================================== -->
+    @if (isLoading)
+    {
+        <RadzenCard>
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                           Size="ProgressBarCircularSize.Small" />
+
+                <RadzenText>
+                    Loading properties...
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrEmpty(loadErrorMessage))
+    {
+        <RadzenCard class="management-load-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Start"
+                         Gap="1rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.5rem;" />
+
+
+                <div class="management-load-error-content">
+
+                    <div class="management-load-error-title">
+                        Unable to load properties
+                    </div>
+
+                    <div class="management-load-error-description">
+                        @loadErrorMessage
+                    </div>
+
+
+                    <RadzenButton Text="Retry"
+                                  Icon="refresh"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Click="@(_ => LoadPropertiesAsync())"
+                                  class="management-load-error-retry" />
+
+                </div>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else
+    {
+        <!-- =================================================
+             GRID CARD
+             ================================================= -->
+
+        <RadzenCard class="management-grid-card">
+
+            <div class="management-grid-header">
+
+                <div>
+
+                    <RadzenText TextStyle="TextStyle.H6"
+                                Style="margin:0;">
+                        Property Portfolio
+                    </RadzenText>
+
+                    <div class="management-grid-summary">
+                        @properties.Count @(properties.Count == 1 ? "property" : "properties") in the portfolio
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <RadzenDataGrid TItem="Property"
+                            Data="@properties"
+                            AllowPaging="true"
+                            PageSize="10"
+                            AllowSorting="true"
+                            AllowFiltering="true"
+                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            class="management-grid"
+                            Style="width:100%;">
+
+                <Columns>
+
+                    <RadzenDataGridColumn TItem="Property"
+                                          Property="PropertyId"
+                                          Title="ID"
+                                          Width="75px" />
+
+
+                    <RadzenDataGridColumn TItem="Property"
+                                          Property="Address"
+                                          Title="Address"
+                                          Width="240px">
+
+                        <Template Context="property">
+
+                            <div class="primary-grid-value">
+                                @property.Address
+                            </div>
+
+                        </Template>
+
+                    </RadzenDataGridColumn>
+
+
+                    <RadzenDataGridColumn TItem="Property"
+                                          Property="City"
+                                          Title="City"
+                                          Width="150px" />
+
+
+                    <RadzenDataGridColumn TItem="Property"
+                                          Property="State"
+                                          Title="State"
+                                          Width="120px" />
+
+
+                    <RadzenDataGridColumn TItem="Property"
+                                          Property="PropertyType"
+                                          Title="Property Type"
+                                          Width="160px" />
+
+
+                    <RadzenDataGridColumn TItem="Property"
+                                          Property="PurchasePrice"
+                                          Title="Purchase Price"
+                                          FormatString="{0:C}"
+                                          TextAlign="TextAlign.Right"
+                                          Width="160px" />
+
+
+                    <RadzenDataGridColumn TItem="Property"
+                                          Title="Actions"
+                                          Filterable="false"
+                                          Sortable="false"
+                                          TextAlign="TextAlign.Center"
+                                          Width="220px">
+
+                        <Template Context="property">
+
+                            <RadzenStack Orientation="Orientation.Horizontal"
+                                         JustifyContent="JustifyContent.Center"
+                                         AlignItems="AlignItems.Center"
+                                         Gap="0.5rem">
+
+                                <RadzenLink Text="View"
+                                            Icon="visibility"
+                                            Path="@($"/properties/{property.PropertyId}")" />
+
+                                <RadzenLink Text="Edit"
+                                            Icon="edit"
+                                            Path="@($"/properties/edit/{property.PropertyId}")" />
+
+                                <RadzenButton Icon="delete"
+                                              Title="Delete property"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Size="ButtonSize.Small"
+                                              Click="@(_ => DeleteProperty(property))" />
+
+                            </RadzenStack>
+
+                        </Template>
+
+                    </RadzenDataGridColumn>
+
+                </Columns>
+
+            </RadzenDataGrid>
+
+        </RadzenCard>
+    }
+
+</RadzenStack>
+
+
+@code
+{
+    // =====================================================
+    // PAGE STATE
+    // =====================================================
+
+    private bool isLoading = true;
+
+    private string? loadErrorMessage;
+
+    private string? operationErrorMessage;
+
+    private string? actionMessage;
+
+    private List<Property> properties = new();
+
+
+    // =====================================================
+    // INITIAL LOAD
+    // =====================================================
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPropertiesAsync();
+    }
+
+
+    // =====================================================
+    // LOAD PROPERTIES
+    // =====================================================
+
+    private async Task LoadPropertiesAsync()
+    {
+        isLoading = true;
+
+        loadErrorMessage = null;
+
+        operationErrorMessage = null;
+
+        actionMessage = null;
+
+
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            properties =
+                await db.Properties
+                    .AsNoTracking()
+                    .OrderBy(
+                        property =>
+                            property.Address)
+                    .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            loadErrorMessage =
+                "The property records could not be loaded. Please try again.";
+
+
+            Console.WriteLine(
+                $"Error loading properties: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    // =====================================================
+    // DELETE PROPERTY
+    // =====================================================
+
+    private async Task DeleteProperty(Property property)
+    {
+        actionMessage = null;
+
+        operationErrorMessage = null;
+
+
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // -------------------------------------------------
+            // CHECK FOR RELATED LEASES
+            // -------------------------------------------------
+
+            var hasLeases =
+                await db.Leases.AnyAsync(
+                    lease =>
+                        lease.PropertyId ==
+                        property.PropertyId);
+
+
+            // -------------------------------------------------
+            // CHECK FOR MAINTENANCE RECORDS
+            // -------------------------------------------------
+
+            var hasMaintenance =
+                await db.Set<Maintenancerequest>()
+                    .AnyAsync(
+                        request =>
+                            request.PropertyId ==
+                            property.PropertyId);
+
+
+            // -------------------------------------------------
+            // CHECK FOR OWNER RELATIONSHIPS
+            // -------------------------------------------------
+
+            var hasOwners =
+                await db.Set<Propertyowner>()
+                    .AnyAsync(
+                        record =>
+                            record.PropertyId ==
+                            property.PropertyId);
+
+
+            // -------------------------------------------------
+            // PROTECT RELATED RECORDS
+            // -------------------------------------------------
+
+            if (hasLeases ||
+                hasMaintenance ||
+                hasOwners)
+            {
+                actionMessage =
+                    "This property cannot be deleted because it has related lease, maintenance, or owner records.";
+
+                return;
+            }
+
+
+            // -------------------------------------------------
+            // CONFIRM DELETE
+            // -------------------------------------------------
+
+            var confirmed =
+                await JS.InvokeAsync<bool>(
+                    "confirm",
+                    $"Are you sure you want to delete {property.Address}?");
+
+
+            if (!confirmed)
+            {
+                return;
+            }
+
+
+            // -------------------------------------------------
+            // FIND PROPERTY AGAIN USING THIS CONTEXT
+            // -------------------------------------------------
+
+            var propertyToDelete =
+                await db.Properties
+                    .FirstOrDefaultAsync(
+                        item =>
+                            item.PropertyId ==
+                            property.PropertyId);
+
+
+            if (propertyToDelete == null)
+            {
+                actionMessage =
+                    "The property could not be found.";
+
+                return;
+            }
+
+
+            // -------------------------------------------------
+            // DELETE FROM MYSQL
+            // -------------------------------------------------
+
+            db.Properties.Remove(
+                propertyToDelete);
+
+
+            await db.SaveChangesAsync();
+
+
+            // -------------------------------------------------
+            // UPDATE VISIBLE GRID
+            // -------------------------------------------------
+
+            properties.Remove(
+                property);
+
+
+            actionMessage =
+                "Property deleted successfully.";
+        }
+        catch (Exception ex)
+        {
+            operationErrorMessage =
+                "The property could not be deleted. Please try again.";
+
+
+            Console.WriteLine(
+                $"Error deleting property {property.PropertyId}: {ex}");
+        }
+    }
+}
+
+
+<style>
+
+    /* =====================================================
+           LOAD ERROR
+           ===================================================== */
+
+    .management-load-error-card {
+        width: 100%;
+        border-left: 4px solid #b91c1c;
+    }
+
+        .management-load-error-card .rz-icon {
+            flex-shrink: 0;
+            color: #b91c1c;
+        }
+
+    .management-load-error-content {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .management-load-error-title {
+        color: #991b1b;
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
+    .management-load-error-description {
+        margin-top: 0.25rem;
+        color: #6b7280;
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+
+    .management-load-error-retry {
+        margin-top: 1rem;
+    }
+
+
+    /* =====================================================
+           OPERATION ERROR
+           ===================================================== */
+
+    .management-operation-error-card {
+        width: 100%;
+        color: #991b1b;
+        border-left: 4px solid #b91c1c;
+    }
+
+        .management-operation-error-card .rz-icon {
+            flex-shrink: 0;
+            color: #b91c1c;
+        }
+
+
+    /* =====================================================
+           MOBILE
+           ===================================================== */
+
+    @@media (max-width: 768px) {
+
+        .management-load-error-retry {
+            width: 100%;
+        }
+    }
+
+</style>

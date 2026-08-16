@@ -1,0 +1,898 @@
+﻿@page "/maintenance/add"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Add Maintenance Request</PageTitle>
+
+<RadzenStack Gap="1.5rem"
+             class="form-page">
+
+
+    <!-- =====================================================
+         BACK LINK
+         ===================================================== -->
+
+    <div>
+
+        <RadzenLink Text="Back to Maintenance"
+                    Icon="arrow_back"
+                    Path="/maintenance"
+                    class="form-back-link" />
+
+    </div>
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div>
+
+        <div class="management-page-eyebrow">
+            MAINTENANCE MANAGEMENT
+        </div>
+
+        <RadzenText TextStyle="TextStyle.H3"
+                    Style="margin:0;">
+            Add Maintenance Request
+        </RadzenText>
+
+        <RadzenText TextStyle="TextStyle.Body1"
+                    Style="margin-top:0.35rem;">
+            Create a new maintenance request for a property.
+        </RadzenText>
+
+    </div>
+
+
+    <!-- =====================================================
+         LOADING / ERROR
+         ===================================================== -->
+    @if (isLoading)
+    {
+        <RadzenCard class="form-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                           Size="ProgressBarCircularSize.Small" />
+
+                <RadzenText>
+                    Loading maintenance information...
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrEmpty(loadErrorMessage))
+    {
+        <RadzenCard class="form-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @loadErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else
+    {
+
+        @if (!string.IsNullOrEmpty(saveErrorMessage))
+        {
+            <RadzenCard class="form-error-card">
+
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             Gap="0.75rem">
+
+                    <RadzenIcon Icon="error"
+                                Style="font-size:1.25rem;" />
+
+                    <RadzenText>
+                        @saveErrorMessage
+                    </RadzenText>
+
+                </RadzenStack>
+
+            </RadzenCard>
+        }
+
+
+        <!-- =================================================
+             FORM
+             ================================================= -->
+
+        <RadzenCard class="form-card">
+
+            <div class="form-card-header">
+
+                <div>
+
+                    <RadzenText TextStyle="TextStyle.H6"
+                                Style="margin:0;">
+                        Maintenance Details
+                    </RadzenText>
+
+                    <div class="form-card-description">
+                        Select the property, describe the issue and assign the request if required.
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="form-card-body">
+
+                <RadzenTemplateForm TItem="AddMaintenanceModel"
+                                    Data="@model"
+                                    Submit="@SaveRequest">
+
+                    <RadzenStack Gap="1.5rem">
+
+
+                        <!-- =====================================
+                             PROPERTY / TENANT
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Property
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenDropDown TValue="int?"
+                                                Name="PropertyId"
+                                                Data="@propertyOptions"
+                                                TextProperty="DisplayName"
+                                                ValueProperty="PropertyId"
+                                                @bind-Value="@model.PropertyId"
+                                                @bind-Value:after="FilterTenantsForSelectedProperty"
+                                                Placeholder="Select a property"
+                                                AllowFiltering="true"
+                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="PropertyId"
+                                                         Text="Please select a property." />
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Tenant
+                                </label>
+
+                                <RadzenDropDown TValue="int?"
+                                                Data="@tenantOptions"
+                                                TextProperty="DisplayName"
+                                                ValueProperty="TenantId"
+                                                @bind-Value="@model.TenantId"
+                                                Placeholder="@TenantPlaceholder"
+                                                AllowClear="true"
+                                                AllowFiltering="true"
+                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                Disabled="@(!model.PropertyId.HasValue || tenantOptions.Count == 0)"
+                                                Style="width:100%;" />
+
+                                @if (model.PropertyId.HasValue &&
+                                     tenantOptions.Count == 0)
+                                {
+                                    <div class="form-field-hint">
+                                        This property does not currently have a tenant with an active lease.
+                                        The request can still be created without a tenant.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="form-field-hint">
+                                        Only tenants with an active lease for the selected property are shown.
+                                    </div>
+                                }
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             ASSIGNED EMPLOYEE / REQUEST DATE
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Assigned Employee
+                                </label>
+
+                                <RadzenDropDown TValue="int?"
+                                                Data="@employeeOptions"
+                                                TextProperty="DisplayName"
+                                                ValueProperty="EmployeeId"
+                                                @bind-Value="@model.EmployeeId"
+                                                Placeholder="Select employee (optional)"
+                                                AllowClear="true"
+                                                AllowFiltering="true"
+                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                Style="width:100%;" />
+
+                                <div class="form-field-hint">
+                                    Optional. Assign an employee responsible for the request.
+                                </div>
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Request Date
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenDatePicker TValue="DateTime?"
+                                                  Name="RequestDate"
+                                                  @bind-Value="@model.RequestDate"
+                                                  DateFormat="dd/MM/yyyy"
+                                                  Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="RequestDate"
+                                                         Text="Request date is required." />
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             DESCRIPTION
+                             ===================================== -->
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Description
+                                <span class="form-required">*</span>
+                            </label>
+
+                            <RadzenTextArea Name="Description"
+                                            @bind-Value="@model.Description"
+                                            Placeholder="Describe the maintenance issue"
+                                            Rows="5"
+                                            Style="width:100%;" />
+
+                            <RadzenRequiredValidator Component="Description"
+                                                     Text="Maintenance description is required." />
+
+                            <div class="form-field-hint">
+                                Include enough information for the assigned employee to understand the issue.
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             STATUS / COST
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Status
+                                </label>
+
+                                <RadzenDropDown TValue="string"
+                                                Data="@statuses"
+                                                @bind-Value="@model.Status"
+                                                Style="width:100%;" />
+
+                                <div class="form-field-hint">
+                                    New requests can be Open or In Progress. Use the Complete action when the work has been completed.
+                                </div>
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Estimated / Current Cost
+                                </label>
+
+                                <RadzenNumeric TValue="decimal?"
+                                               @bind-Value="@model.Cost"
+                                               Min="@(0m)"
+                                               Step="0.01"
+                                               Placeholder="Enter cost if known"
+                                               Style="width:100%;" />
+
+                                <div class="form-field-hint">
+                                    Leave blank if the maintenance cost is not yet known.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             FORM ACTIONS
+                             ===================================== -->
+
+                        <div class="form-actions">
+
+                            <RadzenButton Text="Cancel"
+                                          Icon="close"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Click="@Cancel" />
+
+                            <RadzenButton Text="Save Request"
+                                          Icon="build"
+                                          ButtonType="ButtonType.Submit"
+                                          Disabled="@isSaving" />
+
+                        </div>
+
+
+                        @if (isSaving)
+                        {
+                            <div class="form-saving-message">
+
+                                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                                           Size="ProgressBarCircularSize.Small" />
+
+                                <RadzenText>
+                                    Saving maintenance request...
+                                </RadzenText>
+
+                            </div>
+                        }
+
+                    </RadzenStack>
+
+                </RadzenTemplateForm>
+
+            </div>
+
+        </RadzenCard>
+    }
+
+</RadzenStack>
+
+
+@code
+{
+    private AddMaintenanceModel model =
+        new()
+        {
+            RequestDate =
+                DateTime.Today,
+
+            Status =
+                "Open"
+        };
+
+
+    private bool isLoading = true;
+
+    private bool isSaving;
+
+    private string? loadErrorMessage;
+
+    private string? saveErrorMessage;
+
+
+    private List<PropertyOption> propertyOptions = new();
+
+
+    // Full tenant list kept internally.
+    private List<TenantOption> allTenantOptions = new();
+
+
+    // Only tenants belonging to the selected property
+    // are displayed in the dropdown.
+    private List<TenantOption> tenantOptions = new();
+
+
+    private List<EmployeeOption> employeeOptions = new();
+
+
+    // Stores the active Property -> Tenant relationships
+    // from the Lease table.
+    private List<LeaseTenantLink> activeLeaseTenantLinks = new();
+
+
+    // A new maintenance request cannot start as Completed.
+    private readonly List<string> statuses =
+    [
+        "Open",
+        "In Progress"
+    ];
+
+
+    private string TenantPlaceholder
+    {
+        get
+        {
+            if (!model.PropertyId.HasValue)
+            {
+                return "Select a property first";
+            }
+
+            if (tenantOptions.Count == 0)
+            {
+                return "No active tenant for this property";
+            }
+
+            return "Select tenant (optional)";
+        }
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // Load properties.
+            propertyOptions =
+                await db.Properties
+                    .AsNoTracking()
+                    .OrderBy(property =>
+                        property.Address)
+                    .Select(property =>
+                        new PropertyOption
+                        {
+                            PropertyId =
+                                property.PropertyId,
+
+                            DisplayName =
+                                property.Address +
+                                ", " +
+                                property.City
+                        })
+                    .ToListAsync();
+
+
+            // Load all tenants.
+            //
+            // These are kept internally and then filtered
+            // when the user selects a property.
+            allTenantOptions =
+                await db.Tenants
+                    .AsNoTracking()
+                    .OrderBy(tenant =>
+                        tenant.LastName)
+                    .ThenBy(tenant =>
+                        tenant.FirstName)
+                    .Select(tenant =>
+                        new TenantOption
+                        {
+                            TenantId =
+                                tenant.TenantId,
+
+                            DisplayName =
+                                tenant.FirstName +
+                                " " +
+                                tenant.LastName
+                        })
+                    .ToListAsync();
+
+
+            // Load active leases.
+            //
+            // We use these records to determine which
+            // tenant belongs to which property.
+            var activeLeases =
+                await db.Leases
+                    .AsNoTracking()
+                    .Where(lease =>
+                        lease.LeaseStatus == "Active")
+                    .ToListAsync();
+
+
+            activeLeaseTenantLinks =
+                activeLeases
+                    .Where(lease =>
+                        lease.PropertyId.HasValue &&
+                        lease.TenantId.HasValue)
+                    .Select(lease =>
+                        new LeaseTenantLink
+                        {
+                            PropertyId =
+                                lease.PropertyId!.Value,
+
+                            TenantId =
+                                lease.TenantId!.Value
+                        })
+                    .ToList();
+
+
+            // Initially there is no selected property,
+            // so the Tenant dropdown should be empty.
+            tenantOptions =
+                new List<TenantOption>();
+
+
+            // Load employees.
+            employeeOptions =
+                await db.Employees
+                    .AsNoTracking()
+                    .OrderBy(employee =>
+                        employee.LastName)
+                    .ThenBy(employee =>
+                        employee.FirstName)
+                    .Select(employee =>
+                        new EmployeeOption
+                        {
+                            EmployeeId =
+                                employee.EmployeeId,
+
+                            DisplayName =
+                                employee.FirstName +
+                                " " +
+                                employee.LastName
+                        })
+                    .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            loadErrorMessage =
+                "The maintenance information could not be loaded. Please return to the maintenance page and try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    // ==============================================
+    // FILTER TENANTS WHEN PROPERTY CHANGES
+    // ==============================================
+
+    private Task FilterTenantsForSelectedProperty()
+    {
+        // Always clear the previous tenant when
+        // the property changes.
+        model.TenantId =
+            null;
+
+
+        if (!model.PropertyId.HasValue)
+        {
+            tenantOptions =
+                new List<TenantOption>();
+
+            return Task.CompletedTask;
+        }
+
+
+        // Get every tenant ID with an active lease
+        // for the selected property.
+        var validTenantIds =
+            activeLeaseTenantLinks
+                .Where(link =>
+                    link.PropertyId ==
+                    model.PropertyId.Value)
+                .Select(link =>
+                    link.TenantId)
+                .ToHashSet();
+
+
+        // Only show those tenants in the dropdown.
+        tenantOptions =
+            allTenantOptions
+                .Where(tenant =>
+                    validTenantIds.Contains(
+                        tenant.TenantId))
+                .ToList();
+
+
+        return Task.CompletedTask;
+    }
+
+
+    private async Task SaveRequest(
+        AddMaintenanceModel value)
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+
+        try
+        {
+            isSaving = true;
+
+            saveErrorMessage = null;
+
+
+            if (!value.PropertyId.HasValue)
+            {
+                saveErrorMessage =
+                    "Please select a property.";
+
+                return;
+            }
+
+
+            if (string.IsNullOrWhiteSpace(
+                value.Description))
+            {
+                saveErrorMessage =
+                    "Maintenance description is required.";
+
+                return;
+            }
+
+
+            if (!value.RequestDate.HasValue)
+            {
+                saveErrorMessage =
+                    "Request date is required.";
+
+                return;
+            }
+
+
+            // ==============================================
+            // NEW REQUEST STATUS VALIDATION
+            // ==============================================
+
+            if (value.Status != "Open" &&
+                value.Status != "In Progress")
+            {
+                saveErrorMessage =
+                    "A new maintenance request must have a status of Open or In Progress.";
+
+                return;
+            }
+
+
+            if (value.Cost.HasValue &&
+                value.Cost.Value < 0)
+            {
+                saveErrorMessage =
+                    "Maintenance cost cannot be negative.";
+
+                return;
+            }
+
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // Confirm selected property still exists.
+            var propertyExists =
+                await db.Properties.AnyAsync(
+                    property =>
+                        property.PropertyId ==
+                        value.PropertyId.Value);
+
+
+            if (!propertyExists)
+            {
+                saveErrorMessage =
+                    "The selected property could not be found.";
+
+                return;
+            }
+
+
+            // ==============================================
+            // TENANT / PROPERTY BUSINESS VALIDATION
+            // ==============================================
+
+            if (value.TenantId.HasValue)
+            {
+                // First confirm the tenant still exists.
+                var tenantExists =
+                    await db.Tenants.AnyAsync(
+                        tenant =>
+                            tenant.TenantId ==
+                            value.TenantId.Value);
+
+
+                if (!tenantExists)
+                {
+                    saveErrorMessage =
+                        "The selected tenant could not be found.";
+
+                    return;
+                }
+
+
+                // Then confirm that the tenant actually has
+                // an ACTIVE lease for the selected property.
+                //
+                // This is checked again on the server even
+                // though the dropdown has already been filtered.
+                var tenantBelongsToProperty =
+                    await db.Leases.AnyAsync(
+                        lease =>
+                            lease.PropertyId.HasValue &&
+                            lease.PropertyId.Value ==
+                                value.PropertyId.Value &&
+
+                            lease.TenantId.HasValue &&
+                            lease.TenantId.Value ==
+                                value.TenantId.Value &&
+
+                            lease.LeaseStatus ==
+                                "Active");
+
+
+                if (!tenantBelongsToProperty)
+                {
+                    saveErrorMessage =
+                        "The selected tenant does not have an active lease for this property.";
+
+                    return;
+                }
+            }
+
+
+            // Confirm employee exists if one was selected.
+            if (value.EmployeeId.HasValue)
+            {
+                var employeeExists =
+                    await db.Employees.AnyAsync(
+                        employee =>
+                            employee.EmployeeId ==
+                            value.EmployeeId.Value);
+
+
+                if (!employeeExists)
+                {
+                    saveErrorMessage =
+                        "The selected employee could not be found.";
+
+                    return;
+                }
+            }
+
+
+            var request =
+                new Maintenancerequest
+                {
+                    PropertyId =
+                        value.PropertyId.Value,
+
+                    TenantId =
+                        value.TenantId,
+
+                    EmployeeId =
+                        value.EmployeeId,
+
+                    Description =
+                        value.Description.Trim(),
+
+                    RequestDate =
+                        value.RequestDate.Value,
+
+                    Status =
+                        value.Status,
+
+                    Cost =
+                        value.Cost,
+
+                    CompletionDate =
+                        null
+                };
+
+
+            db.Set<Maintenancerequest>()
+                .Add(request);
+
+
+            await db.SaveChangesAsync();
+
+
+            Navigation.NavigateTo(
+                "/maintenance");
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage =
+                "The maintenance request could not be saved. Please try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo(
+            "/maintenance");
+    }
+
+
+    private sealed class AddMaintenanceModel
+    {
+        public int? PropertyId { get; set; }
+
+        public int? TenantId { get; set; }
+
+        public int? EmployeeId { get; set; }
+
+        public string Description { get; set; } = "";
+
+        public DateTime? RequestDate { get; set; }
+
+        public string Status { get; set; } =
+            "Open";
+
+        public decimal? Cost { get; set; }
+    }
+
+
+    private sealed class PropertyOption
+    {
+        public int PropertyId { get; set; }
+
+        public string DisplayName { get; set; } = "";
+    }
+
+
+    private sealed class TenantOption
+    {
+        public int TenantId { get; set; }
+
+        public string DisplayName { get; set; } = "";
+    }
+
+
+    private sealed class EmployeeOption
+    {
+        public int EmployeeId { get; set; }
+
+        public string DisplayName { get; set; } = "";
+    }
+
+
+    private sealed class LeaseTenantLink
+    {
+        public int PropertyId { get; set; }
+
+        public int TenantId { get; set; }
+    }
+}

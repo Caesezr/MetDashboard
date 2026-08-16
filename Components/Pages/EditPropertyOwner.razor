@@ -1,0 +1,534 @@
+﻿@page "/properties/{PropertyId:int}/owners/{OwnerId:int}/edit"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Edit Ownership</PageTitle>
+
+<RadzenStack Gap="1.5rem"
+             class="form-page">
+
+
+    <!-- =====================================================
+         BACK LINK
+         ===================================================== -->
+
+    <div>
+
+        <RadzenLink Text="Back to Property"
+                    Icon="arrow_back"
+                    Path="@($"/properties/{PropertyId}")"
+                    class="form-back-link" />
+
+    </div>
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+    @if (!isLoading &&
+             string.IsNullOrEmpty(loadErrorMessage) &&
+             model != null)
+    {
+        <div>
+
+            <div class="management-page-eyebrow">
+                OWNERSHIP MANAGEMENT
+            </div>
+
+            <RadzenText TextStyle="TextStyle.H3"
+                        Style="margin:0;">
+                Edit Ownership
+            </RadzenText>
+
+            <RadzenText TextStyle="TextStyle.Body1"
+                        Style="margin-top:0.35rem;">
+                Update the ownership percentage for @ownerName.
+            </RadzenText>
+
+        </div>
+    }
+
+
+    <!-- =====================================================
+         LOADING / ERROR
+         ===================================================== -->
+    @if (isLoading)
+    {
+        <RadzenCard class="form-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                           Size="ProgressBarCircularSize.Small" />
+
+                <RadzenText>
+                    Loading ownership information...
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrEmpty(loadErrorMessage))
+    {
+        <RadzenCard class="form-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @loadErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (model != null)
+    {
+
+        @if (!string.IsNullOrEmpty(saveErrorMessage))
+        {
+            <RadzenCard class="form-error-card">
+
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             Gap="0.75rem">
+
+                    <RadzenIcon Icon="error"
+                                Style="font-size:1.25rem;" />
+
+                    <RadzenText>
+                        @saveErrorMessage
+                    </RadzenText>
+
+                </RadzenStack>
+
+            </RadzenCard>
+        }
+
+
+        <!-- =================================================
+             FORM
+             ================================================= -->
+
+        <RadzenCard class="form-card">
+
+            <div class="form-card-header">
+
+                <div>
+
+                    <RadzenText TextStyle="TextStyle.H6"
+                                Style="margin:0;">
+                        Ownership Details
+                    </RadzenText>
+
+                    <div class="form-card-description">
+                        Review the property and owner, then update the ownership percentage.
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="form-card-body">
+
+                <RadzenTemplateForm TItem="EditOwnershipModel"
+                                    Data="@model"
+                                    Submit="@SaveOwnership">
+
+                    <RadzenStack Gap="1.5rem">
+
+
+                        <!-- =====================================
+                             PROPERTY / OWNER
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Property
+                                </label>
+
+                                <RadzenText TextStyle="TextStyle.Body1"
+                                            Style="font-weight:600; margin:0;">
+                                    @propertyName
+                                </RadzenText>
+
+                                <div class="form-field-hint">
+                                    This ownership record belongs to the selected property.
+                                </div>
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Owner
+                                </label>
+
+                                <RadzenText TextStyle="TextStyle.Body1"
+                                            Style="font-weight:600; margin:0;">
+                                    @ownerName
+                                </RadzenText>
+
+                                <div class="form-field-hint">
+                                    The owner cannot be changed from this screen.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             OWNERSHIP PERCENTAGE
+                             ===================================== -->
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Ownership Percentage
+                                <span class="form-required">*</span>
+                            </label>
+
+                            <RadzenNumeric TValue="decimal?"
+                                           Name="OwnershipPercentage"
+                                           @bind-Value="@model.OwnershipPercentage"
+                                           Min="@(0.01m)"
+                                           Max="@(100m)"
+                                           Step="0.01"
+                                           Placeholder="e.g. 50"
+                                           Style="width:100%;" />
+
+                            <RadzenRequiredValidator Component="OwnershipPercentage"
+                                                     Text="Ownership percentage is required." />
+
+                            <div class="form-field-hint">
+                                Other owners currently hold @otherOwnership.ToString("0.##")%.
+                                The combined ownership cannot exceed 100%.
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             FORM ACTIONS
+                             ===================================== -->
+
+                        <div class="form-actions">
+
+                            <RadzenButton Text="Cancel"
+                                          Icon="close"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Click="@Cancel" />
+
+                            <RadzenButton Text="Save Changes"
+                                          Icon="save"
+                                          ButtonType="ButtonType.Submit"
+                                          Disabled="@isSaving" />
+
+                        </div>
+
+
+                        @if (isSaving)
+                        {
+                            <div class="form-saving-message">
+
+                                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                                           Size="ProgressBarCircularSize.Small" />
+
+                                <RadzenText>
+                                    Saving ownership changes...
+                                </RadzenText>
+
+                            </div>
+                        }
+
+                    </RadzenStack>
+
+                </RadzenTemplateForm>
+
+            </div>
+
+        </RadzenCard>
+    }
+
+</RadzenStack>
+
+
+@code
+{
+    [Parameter]
+    public int PropertyId { get; set; }
+
+    [Parameter]
+    public int OwnerId { get; set; }
+
+
+    private EditOwnershipModel? model;
+
+    private bool isLoading = true;
+
+    private bool isSaving;
+
+    private string? loadErrorMessage;
+
+    private string? saveErrorMessage;
+
+    private string propertyName = "";
+
+    private string ownerName = "";
+
+    private decimal otherOwnership;
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        loadErrorMessage = null;
+
+        saveErrorMessage = null;
+
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // Load property.
+            var property =
+                await db.Properties
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        item =>
+                            item.PropertyId == PropertyId);
+
+
+            if (property == null)
+            {
+                loadErrorMessage =
+                    "The requested property could not be found.";
+
+                return;
+            }
+
+
+            propertyName =
+                $"{property.Address}, {property.City}";
+
+
+            // Load owner.
+            var owner =
+                await db.Owners
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        item =>
+                            item.OwnerId == OwnerId);
+
+
+            if (owner == null)
+            {
+                loadErrorMessage =
+                    "The requested owner could not be found.";
+
+                return;
+            }
+
+
+            ownerName =
+                $"{owner.FirstName} {owner.LastName}";
+
+
+            // Load the existing property-owner assignment.
+            var assignment =
+                await db.Set<Propertyowner>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        record =>
+                            record.PropertyId == PropertyId &&
+                            record.OwnerId == OwnerId);
+
+
+            if (assignment == null)
+            {
+                loadErrorMessage =
+                    "This owner is not assigned to the selected property.";
+
+                return;
+            }
+
+
+            // Calculate ownership belonging to all OTHER owners.
+            var otherOwnershipRecords =
+                await db.Set<Propertyowner>()
+                    .AsNoTracking()
+                    .Where(record =>
+                        record.PropertyId == PropertyId &&
+                        record.OwnerId != OwnerId)
+                    .ToListAsync();
+
+
+            otherOwnership =
+                otherOwnershipRecords.Sum(
+                    record =>
+                        record.OwnershipPercentage ?? 0m);
+
+
+            model =
+                new EditOwnershipModel
+                {
+                    OwnershipPercentage =
+                        assignment.OwnershipPercentage
+                };
+        }
+        catch (Exception ex)
+        {
+            loadErrorMessage =
+                "The ownership information could not be loaded. Please return to the property page and try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    private async Task SaveOwnership(
+        EditOwnershipModel value)
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+            saveErrorMessage = null;
+
+
+            if (!value.OwnershipPercentage.HasValue)
+            {
+                saveErrorMessage =
+                    "Ownership percentage is required.";
+
+                return;
+            }
+
+
+            if (value.OwnershipPercentage.Value <= 0 ||
+                value.OwnershipPercentage.Value > 100)
+            {
+                saveErrorMessage =
+                    "Ownership percentage must be greater than 0 and no more than 100.";
+
+                return;
+            }
+
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // Recalculate the other ownership before saving.
+            var otherRecords =
+                await db.Set<Propertyowner>()
+                    .AsNoTracking()
+                    .Where(record =>
+                        record.PropertyId == PropertyId &&
+                        record.OwnerId != OwnerId)
+                    .ToListAsync();
+
+
+            var currentOtherOwnership =
+                otherRecords.Sum(
+                    record =>
+                        record.OwnershipPercentage ?? 0m);
+
+
+            var newTotal =
+                currentOtherOwnership +
+                value.OwnershipPercentage.Value;
+
+
+            if (newTotal > 100)
+            {
+                saveErrorMessage =
+                    $"Ownership cannot exceed 100%. Other owners already hold {currentOtherOwnership:0.##}%.";
+
+                return;
+            }
+
+
+            // Load the assignment as a tracked entity.
+            var assignment =
+                await db.Set<Propertyowner>()
+                    .FirstOrDefaultAsync(
+                        record =>
+                            record.PropertyId == PropertyId &&
+                            record.OwnerId == OwnerId);
+
+
+            if (assignment == null)
+            {
+                saveErrorMessage =
+                    "The ownership assignment could not be found.";
+
+                return;
+            }
+
+
+            assignment.OwnershipPercentage =
+                value.OwnershipPercentage.Value;
+
+
+            await db.SaveChangesAsync();
+
+
+            Navigation.NavigateTo(
+                $"/properties/{PropertyId}");
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage =
+                "The ownership changes could not be saved. Please try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo(
+            $"/properties/{PropertyId}");
+    }
+
+
+    private sealed class EditOwnershipModel
+    {
+        public decimal? OwnershipPercentage { get; set; }
+    }
+}

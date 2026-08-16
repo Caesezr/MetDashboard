@@ -1,0 +1,957 @@
+﻿@page "/maintenance"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+@using System.Globalization
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+<PageTitle>Maintenance</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div class="management-page-header">
+
+        <div>
+
+            <div class="management-page-eyebrow">
+                MAINTENANCE MANAGEMENT
+            </div>
+
+            <RadzenText TextStyle="TextStyle.H3"
+                        Style="margin:0;">
+                Maintenance Requests
+            </RadzenText>
+
+            <RadzenText TextStyle="TextStyle.Body1"
+                        Style="margin-top:0.35rem;">
+                Monitor and manage property maintenance issues and their current status.
+            </RadzenText>
+
+        </div>
+
+
+        <div class="management-page-actions">
+
+            <RadzenLink Text="Add Maintenance Request"
+                        Icon="add"
+                        Path="/maintenance/add" />
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         ACTION MESSAGE
+         ===================================================== -->
+    @if (!string.IsNullOrEmpty(actionMessage))
+    {
+        <RadzenCard class="management-message-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="info"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @actionMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+
+
+    <!-- =====================================================
+         OPERATION ERROR
+         ===================================================== -->
+    @if (!string.IsNullOrEmpty(operationErrorMessage))
+    {
+        <RadzenCard class="management-operation-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @operationErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+
+
+    <!-- =====================================================
+         LOADING / LOAD ERROR
+         ===================================================== -->
+    @if (isLoading)
+    {
+        <RadzenCard>
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                           Size="ProgressBarCircularSize.Small" />
+
+                <RadzenText>
+                    Loading maintenance requests...
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrEmpty(loadErrorMessage))
+    {
+        <RadzenCard class="management-load-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Start"
+                         Gap="1rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.5rem;" />
+
+
+                <div class="management-load-error-content">
+
+                    <div class="management-load-error-title">
+                        Unable to load maintenance requests
+                    </div>
+
+                    <div class="management-load-error-description">
+                        @loadErrorMessage
+                    </div>
+
+
+                    <RadzenButton Text="Retry"
+                                  Icon="refresh"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Click="@(_ => LoadMaintenanceAsync())"
+                                  class="management-load-error-retry" />
+
+                </div>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else
+    {
+
+        <!-- =================================================
+             SUMMARY CARDS
+             ================================================= -->
+
+        <RadzenRow Gap="1rem">
+
+            <RadzenColumn Size="12"
+                          SizeMD="4">
+
+                <RadzenCard Style="height:100%;">
+
+                    <RadzenStack Orientation="Orientation.Horizontal"
+                                 AlignItems="AlignItems.Center"
+                                 Gap="1rem">
+
+                        <RadzenIcon Icon="pending_actions"
+                                    Style="font-size:2rem;" />
+
+                        <div>
+
+                            <RadzenText TextStyle="TextStyle.Overline"
+                                        Style="margin:0;">
+                                OPEN
+                            </RadzenText>
+
+                            <RadzenText TextStyle="TextStyle.H4"
+                                        Style="margin:0.15rem 0 0 0;">
+                                @openRequests
+                            </RadzenText>
+
+                        </div>
+
+                    </RadzenStack>
+
+                </RadzenCard>
+
+            </RadzenColumn>
+
+
+            <RadzenColumn Size="12"
+                          SizeMD="4">
+
+                <RadzenCard Style="height:100%;">
+
+                    <RadzenStack Orientation="Orientation.Horizontal"
+                                 AlignItems="AlignItems.Center"
+                                 Gap="1rem">
+
+                        <RadzenIcon Icon="construction"
+                                    Style="font-size:2rem;" />
+
+                        <div>
+
+                            <RadzenText TextStyle="TextStyle.Overline"
+                                        Style="margin:0;">
+                                IN PROGRESS
+                            </RadzenText>
+
+                            <RadzenText TextStyle="TextStyle.H4"
+                                        Style="margin:0.15rem 0 0 0;">
+                                @inProgressRequests
+                            </RadzenText>
+
+                        </div>
+
+                    </RadzenStack>
+
+                </RadzenCard>
+
+            </RadzenColumn>
+
+
+            <RadzenColumn Size="12"
+                          SizeMD="4">
+
+                <RadzenCard Style="height:100%;">
+
+                    <RadzenStack Orientation="Orientation.Horizontal"
+                                 AlignItems="AlignItems.Center"
+                                 Gap="1rem">
+
+                        <RadzenIcon Icon="task_alt"
+                                    Style="font-size:2rem;" />
+
+                        <div>
+
+                            <RadzenText TextStyle="TextStyle.Overline"
+                                        Style="margin:0;">
+                                COMPLETED
+                            </RadzenText>
+
+                            <RadzenText TextStyle="TextStyle.H4"
+                                        Style="margin:0.15rem 0 0 0;">
+                                @completedRequests
+                            </RadzenText>
+
+                        </div>
+
+                    </RadzenStack>
+
+                </RadzenCard>
+
+            </RadzenColumn>
+
+        </RadzenRow>
+
+
+        <!-- =================================================
+             MAINTENANCE GRID
+             ================================================= -->
+
+        <RadzenCard class="management-grid-card">
+
+            <div class="management-grid-header">
+
+                <div>
+
+                    <RadzenText TextStyle="TextStyle.H6"
+                                Style="margin:0;">
+                        Maintenance Register
+                    </RadzenText>
+
+                    <div class="management-grid-summary">
+                        @maintenanceItems.Count @(maintenanceItems.Count == 1 ? "request" : "requests") recorded
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <RadzenDataGrid TItem="MaintenanceDisplayItem"
+                            Data="@maintenanceItems"
+                            AllowPaging="true"
+                            PageSize="10"
+                            AllowSorting="true"
+                            AllowFiltering="true"
+                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            class="management-grid"
+                            Style="width:100%;">
+
+                <Columns>
+
+                    <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                          Property="RequestId"
+                                          Title="Request ID"
+                                          Width="110px" />
+
+
+                    <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                          Property="Property"
+                                          Title="Property"
+                                          Width="210px">
+
+                        <Template Context="request">
+
+                            <div class="primary-grid-value">
+                                @request.Property
+                            </div>
+
+                        </Template>
+
+                    </RadzenDataGridColumn>
+
+
+                    <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                          Property="Tenant"
+                                          Title="Tenant"
+                                          Width="170px" />
+
+
+                    <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                          Property="AssignedEmployee"
+                                          Title="Assigned To"
+                                          Width="170px" />
+
+
+                    <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                          Property="Description"
+                                          Title="Description"
+                                          Width="280px" />
+
+
+                    <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                          Property="RequestDate"
+                                          Title="Request Date"
+                                          Width="140px" />
+
+
+                    <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                          Property="CompletionDate"
+                                          Title="Completion Date"
+                                          Width="155px" />
+
+
+                    <!-- STATUS BADGE -->
+
+                    <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                          Property="Status"
+                                          Title="Status"
+                                          Width="145px">
+
+                        <Template Context="request">
+
+                            <span class="@GetMaintenanceStatusClass(request.Status)">
+                                @request.Status
+                            </span>
+
+                        </Template>
+
+                    </RadzenDataGridColumn>
+
+
+                    <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                          Property="Cost"
+                                          Title="Cost"
+                                          TextAlign="TextAlign.Right"
+                                          Width="130px" />
+
+
+                    <!-- ACTIONS -->
+
+                    <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                          Title="Actions"
+                                          Filterable="false"
+                                          Sortable="false"
+                                          TextAlign="TextAlign.Center"
+                                          Width="210px">
+
+                        <Template Context="request">
+
+                            <RadzenStack Orientation="Orientation.Horizontal"
+                                         JustifyContent="JustifyContent.Center"
+                                         AlignItems="AlignItems.Center"
+                                         Gap="0.5rem">
+
+                                <RadzenLink Text="Edit"
+                                            Icon="edit"
+                                            Path="@($"/maintenance/edit/{request.RequestId}")" />
+
+
+                                @if (request.Status != "Completed")
+                                {
+                                    <RadzenButton Text="Complete"
+                                                  Icon="check"
+                                                  Title="Complete maintenance request"
+                                                  ButtonStyle="ButtonStyle.Success"
+                                                  Size="ButtonSize.Small"
+                                                  Click="@(_ => CompleteRequest(request))" />
+                                }
+
+                            </RadzenStack>
+
+                        </Template>
+
+                    </RadzenDataGridColumn>
+
+                </Columns>
+
+            </RadzenDataGrid>
+
+        </RadzenCard>
+    }
+
+</RadzenStack>
+
+
+@code
+{
+    // =====================================================
+    // PAGE STATE
+    // =====================================================
+
+    private bool isLoading = true;
+
+    private string? loadErrorMessage;
+
+    private string? operationErrorMessage;
+
+    private string? actionMessage;
+
+    private List<MaintenanceDisplayItem> maintenanceItems = new();
+
+    private int openRequests;
+
+    private int inProgressRequests;
+
+    private int completedRequests;
+
+
+    // =====================================================
+    // INITIAL LOAD
+    // =====================================================
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMaintenanceAsync();
+    }
+
+
+    // =====================================================
+    // LOAD MAINTENANCE
+    // =====================================================
+
+    private async Task LoadMaintenanceAsync()
+    {
+        isLoading = true;
+
+        loadErrorMessage = null;
+
+        operationErrorMessage = null;
+
+        actionMessage = null;
+
+
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // -------------------------------------------------
+            // LOAD MAINTENANCE RECORDS
+            // -------------------------------------------------
+
+            var maintenanceRecords =
+                await db.Set<Maintenancerequest>()
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // -------------------------------------------------
+            // LOAD PROPERTIES
+            // -------------------------------------------------
+
+            var propertyRecords =
+                await db.Properties
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // -------------------------------------------------
+            // LOAD TENANTS
+            // -------------------------------------------------
+
+            var tenantRecords =
+                await db.Tenants
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // -------------------------------------------------
+            // LOAD EMPLOYEES
+            // -------------------------------------------------
+
+            var employeeRecords =
+                await db.Employees
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // -------------------------------------------------
+            // CREATE LOOKUPS
+            // -------------------------------------------------
+
+            var propertyLookup =
+                propertyRecords.ToDictionary(
+                    property =>
+                        property.PropertyId,
+                    property =>
+                        property.Address);
+
+
+            var tenantLookup =
+                tenantRecords.ToDictionary(
+                    tenant =>
+                        tenant.TenantId,
+                    tenant =>
+                        $"{tenant.FirstName} {tenant.LastName}");
+
+
+            var employeeLookup =
+                employeeRecords.ToDictionary(
+                    employee =>
+                        employee.EmployeeId,
+                    employee =>
+                        $"{employee.FirstName} {employee.LastName}");
+
+
+            // -------------------------------------------------
+            // CREATE DISPLAY RECORDS
+            // -------------------------------------------------
+
+            maintenanceItems =
+                maintenanceRecords
+                    .Select(
+                        request =>
+                        {
+                            string propertyName =
+                                "Unknown Property";
+
+                            string tenantName =
+                                "No Tenant";
+
+                            string employeeName =
+                                "Unassigned";
+
+
+                            // -----------------------------------------
+                            // FIND PROPERTY
+                            // -----------------------------------------
+
+                            if (request.PropertyId.HasValue &&
+                                propertyLookup.TryGetValue(
+                                    request.PropertyId.Value,
+                                    out var propertyAddress))
+                            {
+                                propertyName =
+                                    propertyAddress;
+                            }
+
+
+                            // -----------------------------------------
+                            // FIND TENANT
+                            // -----------------------------------------
+
+                            if (request.TenantId.HasValue &&
+                                tenantLookup.TryGetValue(
+                                    request.TenantId.Value,
+                                    out var foundTenant))
+                            {
+                                tenantName =
+                                    foundTenant;
+                            }
+
+
+                            // -----------------------------------------
+                            // FIND EMPLOYEE
+                            // -----------------------------------------
+
+                            if (request.EmployeeId.HasValue &&
+                                employeeLookup.TryGetValue(
+                                    request.EmployeeId.Value,
+                                    out var foundEmployee))
+                            {
+                                employeeName =
+                                    foundEmployee;
+                            }
+
+
+                            return new MaintenanceDisplayItem
+                            {
+                                RequestId =
+                                    request.RequestId,
+
+                                Property =
+                                    propertyName,
+
+                                Tenant =
+                                    tenantName,
+
+                                AssignedEmployee =
+                                    employeeName,
+
+                                Description =
+                                    request.Description,
+
+                                RequestDate =
+                                    request.RequestDate.HasValue
+                                        ? request.RequestDate.Value
+                                            .ToString("dd MMM yyyy")
+                                        : "No Date",
+
+                                CompletionDate =
+                                    request.CompletionDate.HasValue
+                                        ? request.CompletionDate.Value
+                                            .ToString("dd MMM yyyy")
+                                        : "Not Completed",
+
+                                Status =
+                                    request.Status ??
+                                    "Unknown",
+
+                                Cost =
+                                    request.Cost.HasValue
+                                        ? string.Format(
+                                            CultureInfo.GetCultureInfo("en-GB"),
+                                            "{0:C}",
+                                            request.Cost.Value)
+                                        : "Not Recorded"
+                            };
+                        })
+                    .OrderByDescending(
+                        item =>
+                            item.RequestId)
+                    .ToList();
+
+
+            // -------------------------------------------------
+            // SUMMARY INFORMATION
+            // -------------------------------------------------
+
+            openRequests =
+                maintenanceRecords.Count(
+                    request =>
+                        request.Status ==
+                        "Open");
+
+
+            inProgressRequests =
+                maintenanceRecords.Count(
+                    request =>
+                        request.Status ==
+                        "In Progress");
+
+
+            completedRequests =
+                maintenanceRecords.Count(
+                    request =>
+                        request.Status ==
+                        "Completed");
+        }
+        catch (Exception ex)
+        {
+            loadErrorMessage =
+                "The maintenance records could not be loaded. Please try again.";
+
+
+            Console.WriteLine(
+                $"Error loading maintenance requests: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    // =====================================================
+    // STATUS BADGE
+    // =====================================================
+
+    private static string GetMaintenanceStatusClass(
+        string status)
+    {
+        return status switch
+        {
+            "Open" =>
+                "status-badge status-badge-warning",
+
+            "In Progress" =>
+                "status-badge status-badge-info",
+
+            "Completed" =>
+                "status-badge status-badge-success",
+
+            _ =>
+                "status-badge status-badge-neutral"
+        };
+    }
+
+
+    // =====================================================
+    // COMPLETE MAINTENANCE REQUEST
+    // =====================================================
+
+    private async Task CompleteRequest(
+        MaintenanceDisplayItem item)
+    {
+        actionMessage = null;
+
+        operationErrorMessage = null;
+
+
+        try
+        {
+            // -------------------------------------------------
+            // CONFIRM COMPLETION
+            // -------------------------------------------------
+
+            var confirmed =
+                await JS.InvokeAsync<bool>(
+                    "confirm",
+                    $"Mark Maintenance Request #{item.RequestId} as completed?");
+
+
+            if (!confirmed)
+            {
+                return;
+            }
+
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // -------------------------------------------------
+            // LOAD REQUEST FROM DATABASE
+            // -------------------------------------------------
+
+            var request =
+                await db.Set<Maintenancerequest>()
+                    .FirstOrDefaultAsync(
+                        record =>
+                            record.RequestId ==
+                            item.RequestId);
+
+
+            if (request == null)
+            {
+                actionMessage =
+                    "The maintenance request could not be found.";
+
+                return;
+            }
+
+
+            // -------------------------------------------------
+            // PREVENT DUPLICATE COMPLETION
+            // -------------------------------------------------
+
+            if (request.Status == "Completed")
+            {
+                actionMessage =
+                    $"Maintenance Request #{item.RequestId} is already completed.";
+
+                return;
+            }
+
+
+            // -------------------------------------------------
+            // REMEMBER PREVIOUS STATUS
+            // -------------------------------------------------
+
+            var previousStatus =
+                request.Status;
+
+
+            // -------------------------------------------------
+            // MARK AS COMPLETED
+            // -------------------------------------------------
+
+            request.Status =
+                "Completed";
+
+
+            request.CompletionDate =
+                DateTime.Today;
+
+
+            await db.SaveChangesAsync();
+
+
+            // -------------------------------------------------
+            // UPDATE VISIBLE GRID
+            // -------------------------------------------------
+
+            item.Status =
+                "Completed";
+
+
+            item.CompletionDate =
+                DateTime.Today
+                    .ToString("dd MMM yyyy");
+
+
+            // -------------------------------------------------
+            // UPDATE SUMMARY CARDS
+            // -------------------------------------------------
+
+            if (previousStatus == "Open")
+            {
+                openRequests =
+                    Math.Max(
+                        0,
+                        openRequests - 1);
+            }
+            else if (previousStatus == "In Progress")
+            {
+                inProgressRequests =
+                    Math.Max(
+                        0,
+                        inProgressRequests - 1);
+            }
+
+
+            completedRequests++;
+
+
+            actionMessage =
+                $"Maintenance Request #{item.RequestId} marked as completed.";
+        }
+        catch (Exception ex)
+        {
+            operationErrorMessage =
+                "The maintenance request could not be completed. Please try again.";
+
+
+            Console.WriteLine(
+                $"Error completing maintenance request {item.RequestId}: {ex}");
+        }
+    }
+
+
+    // =====================================================
+    // DISPLAY MODEL
+    // =====================================================
+
+    private sealed class MaintenanceDisplayItem
+    {
+        public int RequestId { get; set; }
+
+        public string Property { get; set; } = "";
+
+        public string Tenant { get; set; } = "";
+
+        public string AssignedEmployee { get; set; } = "";
+
+        public string Description { get; set; } = "";
+
+        public string RequestDate { get; set; } = "";
+
+        public string CompletionDate { get; set; } = "";
+
+        public string Status { get; set; } = "";
+
+        public string Cost { get; set; } = "";
+    }
+}
+
+
+<style>
+
+    /* =====================================================
+           LOAD ERROR
+           ===================================================== */
+
+    .management-load-error-card {
+        width: 100%;
+        border-left: 4px solid #b91c1c;
+    }
+
+        .management-load-error-card .rz-icon {
+            flex-shrink: 0;
+            color: #b91c1c;
+        }
+
+    .management-load-error-content {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .management-load-error-title {
+        color: #991b1b;
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
+    .management-load-error-description {
+        margin-top: 0.25rem;
+        color: #6b7280;
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+
+    .management-load-error-retry {
+        margin-top: 1rem;
+    }
+
+
+    /* =====================================================
+           OPERATION ERROR
+           ===================================================== */
+
+    .management-operation-error-card {
+        width: 100%;
+        color: #991b1b;
+        border-left: 4px solid #b91c1c;
+    }
+
+        .management-operation-error-card .rz-icon {
+            flex-shrink: 0;
+            color: #b91c1c;
+        }
+
+
+    /* =====================================================
+           MOBILE
+           ===================================================== */
+
+    @@media (max-width: 768px) {
+
+        .management-load-error-retry {
+            width: 100%;
+        }
+    }
+
+</style>

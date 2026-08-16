@@ -1,0 +1,391 @@
+﻿@page "/tenants/add"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Add Tenant</PageTitle>
+
+<RadzenStack Gap="1.5rem"
+             class="form-page">
+
+
+    <!-- =====================================================
+         BACK LINK
+         ===================================================== -->
+
+    <div>
+
+        <RadzenLink Text="Back to Tenants"
+                    Icon="arrow_back"
+                    Path="/tenants"
+                    class="form-back-link" />
+
+    </div>
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div>
+
+        <div class="management-page-eyebrow">
+            TENANT MANAGEMENT
+        </div>
+
+        <RadzenText TextStyle="TextStyle.H3"
+                    Style="margin:0;">
+            Add Tenant
+        </RadzenText>
+
+        <RadzenText TextStyle="TextStyle.Body1"
+                    Style="margin-top:0.35rem;">
+            Add a new tenant to the property management system.
+        </RadzenText>
+
+    </div>
+
+
+    <!-- =====================================================
+         ERROR MESSAGE
+         ===================================================== -->
+    @if (!string.IsNullOrEmpty(saveErrorMessage))
+    {
+        <RadzenCard class="form-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @saveErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+
+
+    <!-- =====================================================
+         FORM
+         ===================================================== -->
+
+    <RadzenCard class="form-card">
+
+        <div class="form-card-header">
+
+            <div>
+
+                <RadzenText TextStyle="TextStyle.H6"
+                            Style="margin:0;">
+                    Tenant Details
+                </RadzenText>
+
+                <div class="form-card-description">
+                    Enter the tenant's personal, contact and employment information.
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="form-card-body">
+
+            <RadzenTemplateForm TItem="AddTenantModel"
+                                Data="@model"
+                                Submit="@SaveTenant">
+
+                <RadzenStack Gap="1.5rem">
+
+
+                    <!-- =====================================
+                         FIRST NAME / LAST NAME
+                         ===================================== -->
+
+                    <div class="form-grid">
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                First Name
+                                <span class="form-required">*</span>
+                            </label>
+
+                            <RadzenTextBox Name="FirstName"
+                                           @bind-Value="@model.FirstName"
+                                           Placeholder="Enter first name"
+                                           Style="width:100%;" />
+
+                            <RadzenRequiredValidator Component="FirstName"
+                                                     Text="First name is required." />
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Last Name
+                                <span class="form-required">*</span>
+                            </label>
+
+                            <RadzenTextBox Name="LastName"
+                                           @bind-Value="@model.LastName"
+                                           Placeholder="Enter last name"
+                                           Style="width:100%;" />
+
+                            <RadzenRequiredValidator Component="LastName"
+                                                     Text="Last name is required." />
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================
+                         EMAIL / PHONE
+                         ===================================== -->
+
+                    <div class="form-grid">
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Email
+                            </label>
+
+                            <RadzenTextBox Name="Email"
+                                           @bind-Value="@model.Email"
+                                           Placeholder="e.g. tenant@example.com"
+                                           Style="width:100%;" />
+
+                            <RadzenEmailValidator Component="Email"
+                                                  Text="Please enter a valid email address." />
+
+                            <div class="form-field-hint">
+                                Email addresses must be unique when provided.
+                            </div>
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Phone
+                            </label>
+
+                            <RadzenTextBox @bind-Value="@model.Phone"
+                                           Placeholder="e.g. 07123 456789"
+                                           Style="width:100%;" />
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================
+                         EMPLOYER / EMERGENCY CONTACT
+                         ===================================== -->
+
+                    <div class="form-grid">
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Employer
+                            </label>
+
+                            <RadzenTextBox @bind-Value="@model.Employer"
+                                           Placeholder="Enter employer"
+                                           Style="width:100%;" />
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Emergency Contact
+                            </label>
+
+                            <RadzenTextBox @bind-Value="@model.EmergencyContact"
+                                           Placeholder="Enter emergency contact number"
+                                           Style="width:100%;" />
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================
+                         FORM ACTIONS
+                         ===================================== -->
+
+                    <div class="form-actions">
+
+                        <RadzenButton Text="Cancel"
+                                      Icon="close"
+                                      ButtonStyle="ButtonStyle.Light"
+                                      Click="@Cancel" />
+
+                        <RadzenButton Text="Save Tenant"
+                                      Icon="save"
+                                      ButtonType="ButtonType.Submit"
+                                      Disabled="@isSaving" />
+
+                    </div>
+
+
+                    @if (isSaving)
+                    {
+                        <div class="form-saving-message">
+
+                            <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                                       Size="ProgressBarCircularSize.Small" />
+
+                            <RadzenText>
+                                Saving tenant...
+                            </RadzenText>
+
+                        </div>
+                    }
+
+                </RadzenStack>
+
+            </RadzenTemplateForm>
+
+        </div>
+
+    </RadzenCard>
+
+</RadzenStack>
+
+
+@code
+{
+    private AddTenantModel model = new();
+
+    private bool isSaving;
+
+    private string? saveErrorMessage;
+
+
+    private async Task SaveTenant(AddTenantModel value)
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+
+            saveErrorMessage = null;
+
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // Check for duplicate email address.
+            if (!string.IsNullOrWhiteSpace(value.Email))
+            {
+                var emailExists =
+                    await db.Tenants.AnyAsync(
+                        tenant =>
+                            tenant.Email == value.Email.Trim());
+
+                if (emailExists)
+                {
+                    saveErrorMessage =
+                        "A tenant with this email address already exists.";
+
+                    return;
+                }
+            }
+
+
+            var newTenant =
+                new Tenant
+                {
+                    FirstName =
+                        value.FirstName.Trim(),
+
+                    LastName =
+                        value.LastName.Trim(),
+
+                    Email =
+                        string.IsNullOrWhiteSpace(value.Email)
+                            ? null
+                            : value.Email.Trim(),
+
+                    Phone =
+                        string.IsNullOrWhiteSpace(value.Phone)
+                            ? null
+                            : value.Phone.Trim(),
+
+                    Employer =
+                        string.IsNullOrWhiteSpace(value.Employer)
+                            ? null
+                            : value.Employer.Trim(),
+
+                    EmergencyContact =
+                        string.IsNullOrWhiteSpace(value.EmergencyContact)
+                            ? null
+                            : value.EmergencyContact.Trim()
+                };
+
+
+            db.Tenants.Add(newTenant);
+
+            await db.SaveChangesAsync();
+
+
+            Navigation.NavigateTo("/tenants");
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage =
+                "The tenant could not be saved. Please try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/tenants");
+    }
+
+
+    private sealed class AddTenantModel
+    {
+        public string FirstName { get; set; } = "";
+
+        public string LastName { get; set; } = "";
+
+        public string? Email { get; set; }
+
+        public string? Phone { get; set; }
+
+        public string? Employer { get; set; }
+
+        public string? EmergencyContact { get; set; }
+    }
+}

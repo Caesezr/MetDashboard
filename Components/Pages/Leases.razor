@@ -1,0 +1,705 @@
+﻿@page "/leases"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+@using System.Globalization
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+<PageTitle>Leases</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div class="management-page-header">
+
+        <div>
+
+            <div class="management-page-eyebrow">
+                LEASE MANAGEMENT
+            </div>
+
+            <RadzenText TextStyle="TextStyle.H3"
+                        Style="margin:0;">
+                Leases
+            </RadzenText>
+
+            <RadzenText TextStyle="TextStyle.Body1"
+                        Style="margin-top:0.35rem;">
+                View and manage current and historical property leases.
+            </RadzenText>
+
+        </div>
+
+
+        <div class="management-page-actions">
+
+            <RadzenLink Text="Add Lease"
+                        Icon="add"
+                        Path="/leases/add" />
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         ACTION MESSAGE
+         ===================================================== -->
+    @if (!string.IsNullOrEmpty(actionMessage))
+    {
+        <RadzenCard class="management-message-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="info"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @actionMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+
+
+    <!-- =====================================================
+         OPERATION ERROR
+         ===================================================== -->
+    @if (!string.IsNullOrEmpty(operationErrorMessage))
+    {
+        <RadzenCard class="management-operation-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @operationErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+
+
+    <!-- =====================================================
+         LOADING / LOAD ERROR
+         ===================================================== -->
+    @if (isLoading)
+    {
+        <RadzenCard>
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                           Size="ProgressBarCircularSize.Small" />
+
+                <RadzenText>
+                    Loading leases...
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrEmpty(loadErrorMessage))
+    {
+        <RadzenCard class="management-load-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Start"
+                         Gap="1rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.5rem;" />
+
+
+                <div class="management-load-error-content">
+
+                    <div class="management-load-error-title">
+                        Unable to load leases
+                    </div>
+
+                    <div class="management-load-error-description">
+                        @loadErrorMessage
+                    </div>
+
+
+                    <RadzenButton Text="Retry"
+                                  Icon="refresh"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Click="@(_ => LoadLeasesAsync())"
+                                  class="management-load-error-retry" />
+
+                </div>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else
+    {
+        <!-- =================================================
+             GRID CARD
+             ================================================= -->
+
+        <RadzenCard class="management-grid-card">
+
+            <div class="management-grid-header">
+
+                <div>
+
+                    <RadzenText TextStyle="TextStyle.H6"
+                                Style="margin:0;">
+                        Lease Register
+                    </RadzenText>
+
+                    <div class="management-grid-summary">
+                        @leases.Count @(leases.Count == 1 ? "lease" : "leases") recorded
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <RadzenDataGrid TItem="LeaseDisplayItem"
+                            Data="@leases"
+                            AllowPaging="true"
+                            PageSize="10"
+                            AllowSorting="true"
+                            AllowFiltering="true"
+                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            class="management-grid"
+                            Style="width:100%;">
+
+                <Columns>
+
+                    <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                          Property="LeaseId"
+                                          Title="Lease ID"
+                                          Width="100px" />
+
+
+                    <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                          Property="Property"
+                                          Title="Property"
+                                          Width="220px">
+
+                        <Template Context="lease">
+
+                            <div class="primary-grid-value">
+                                @lease.Property
+                            </div>
+
+                        </Template>
+
+                    </RadzenDataGridColumn>
+
+
+                    <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                          Property="Tenant"
+                                          Title="Tenant"
+                                          Width="180px" />
+
+
+                    <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                          Property="StartDate"
+                                          Title="Start Date"
+                                          Width="135px" />
+
+
+                    <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                          Property="EndDate"
+                                          Title="End Date"
+                                          Width="135px" />
+
+
+                    <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                          Property="MonthlyRent"
+                                          Title="Monthly Rent"
+                                          TextAlign="TextAlign.Right"
+                                          Width="150px" />
+
+
+                    <!-- STATUS BADGE -->
+
+                    <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                          Property="Status"
+                                          Title="Status"
+                                          Width="135px">
+
+                        <Template Context="lease">
+
+                            <span class="@GetLeaseStatusClass(lease.Status)">
+                                @lease.Status
+                            </span>
+
+                        </Template>
+
+                    </RadzenDataGridColumn>
+
+
+                    <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                          Title="Actions"
+                                          Filterable="false"
+                                          Sortable="false"
+                                          TextAlign="TextAlign.Center"
+                                          Width="210px">
+
+                        <Template Context="lease">
+
+                            <RadzenStack Orientation="Orientation.Horizontal"
+                                         JustifyContent="JustifyContent.Center"
+                                         AlignItems="AlignItems.Center"
+                                         Gap="0.5rem">
+
+                                <RadzenLink Text="Edit"
+                                            Icon="edit"
+                                            Path="@($"/leases/edit/{lease.LeaseId}")" />
+
+                                <RadzenButton Text="Terminate"
+                                              Icon="cancel"
+                                              Title="Terminate lease"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Size="ButtonSize.Small"
+                                              Disabled="@(lease.Status != "Active")"
+                                              Click="@(_ => TerminateLease(lease))" />
+
+                            </RadzenStack>
+
+                        </Template>
+
+                    </RadzenDataGridColumn>
+
+                </Columns>
+
+            </RadzenDataGrid>
+
+        </RadzenCard>
+    }
+
+</RadzenStack>
+
+
+@code
+{
+    // =====================================================
+    // PAGE STATE
+    // =====================================================
+
+    private bool isLoading = true;
+
+    private string? loadErrorMessage;
+
+    private string? operationErrorMessage;
+
+    private string? actionMessage;
+
+    private List<LeaseDisplayItem> leases = new();
+
+
+    // =====================================================
+    // INITIAL LOAD
+    // =====================================================
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLeasesAsync();
+    }
+
+
+    // =====================================================
+    // LOAD LEASES
+    // =====================================================
+
+    private async Task LoadLeasesAsync()
+    {
+        isLoading = true;
+
+        loadErrorMessage = null;
+
+        operationErrorMessage = null;
+
+        actionMessage = null;
+
+
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // -------------------------------------------------
+            // LOAD LEASE RECORDS
+            // -------------------------------------------------
+
+            var leaseRecords =
+                await db.Leases
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // -------------------------------------------------
+            // LOAD PROPERTIES
+            // -------------------------------------------------
+
+            var properties =
+                await db.Properties
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // -------------------------------------------------
+            // LOAD TENANTS
+            // -------------------------------------------------
+
+            var tenants =
+                await db.Tenants
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // -------------------------------------------------
+            // CREATE LOOKUP TABLES
+            // -------------------------------------------------
+
+            var propertyLookup =
+                properties.ToDictionary(
+                    property =>
+                        property.PropertyId,
+                    property =>
+                        property.Address);
+
+
+            var tenantLookup =
+                tenants.ToDictionary(
+                    tenant =>
+                        tenant.TenantId,
+                    tenant =>
+                        $"{tenant.FirstName} {tenant.LastName}");
+
+
+            // -------------------------------------------------
+            // COMBINE LEASE + PROPERTY + TENANT
+            // -------------------------------------------------
+
+            leases =
+                leaseRecords
+                    .Select(
+                        lease =>
+                            new LeaseDisplayItem
+                            {
+                                LeaseId =
+                                    lease.LeaseId,
+
+                                Property =
+                                    lease.PropertyId.HasValue &&
+                                    propertyLookup.TryGetValue(
+                                        lease.PropertyId.Value,
+                                        out var propertyAddress)
+                                        ? propertyAddress
+                                        : "Unknown Property",
+
+                                Tenant =
+                                    lease.TenantId.HasValue &&
+                                    tenantLookup.TryGetValue(
+                                        lease.TenantId.Value,
+                                        out var tenantName)
+                                        ? tenantName
+                                        : "Unknown Tenant",
+
+                                StartDate =
+                                    string.Format(
+                                        CultureInfo.GetCultureInfo("en-GB"),
+                                        "{0:dd MMM yyyy}",
+                                        lease.StartDate),
+
+                                EndDate =
+                                    string.Format(
+                                        CultureInfo.GetCultureInfo("en-GB"),
+                                        "{0:dd MMM yyyy}",
+                                        lease.EndDate),
+
+                                MonthlyRent =
+                                    string.Format(
+                                        CultureInfo.GetCultureInfo("en-GB"),
+                                        "{0:C}",
+                                        lease.MonthlyRent),
+
+                                Status =
+                                    lease.LeaseStatus ??
+                                    "Unknown"
+                            })
+                    .OrderBy(
+                        lease =>
+                            lease.Property)
+                    .ToList();
+        }
+        catch (Exception ex)
+        {
+            loadErrorMessage =
+                "The lease records could not be loaded. Please try again.";
+
+
+            Console.WriteLine(
+                $"Error loading leases: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    // =====================================================
+    // STATUS BADGE
+    // =====================================================
+
+    private static string GetLeaseStatusClass(
+        string status)
+    {
+        return status switch
+        {
+            "Active" =>
+                "status-badge status-badge-success",
+
+            "Expired" =>
+                "status-badge status-badge-neutral",
+
+            "Terminated" =>
+                "status-badge status-badge-danger",
+
+            _ =>
+                "status-badge status-badge-neutral"
+        };
+    }
+
+
+    // =====================================================
+    // TERMINATE LEASE
+    // =====================================================
+
+    private async Task TerminateLease(
+        LeaseDisplayItem lease)
+    {
+        actionMessage = null;
+
+        operationErrorMessage = null;
+
+
+        try
+        {
+            // -------------------------------------------------
+            // ONLY ACTIVE LEASES CAN BE TERMINATED
+            // -------------------------------------------------
+
+            if (lease.Status != "Active")
+            {
+                actionMessage =
+                    "Only active leases can be terminated.";
+
+                return;
+            }
+
+
+            // -------------------------------------------------
+            // CONFIRM TERMINATION
+            // -------------------------------------------------
+
+            var confirmed =
+                await JS.InvokeAsync<bool>(
+                    "confirm",
+                    $"Are you sure you want to terminate Lease #{lease.LeaseId}?");
+
+
+            if (!confirmed)
+            {
+                return;
+            }
+
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // -------------------------------------------------
+            // LOAD LEASE FROM DATABASE
+            // -------------------------------------------------
+
+            var leaseToTerminate =
+                await db.Leases
+                    .FirstOrDefaultAsync(
+                        item =>
+                            item.LeaseId ==
+                            lease.LeaseId);
+
+
+            if (leaseToTerminate == null)
+            {
+                actionMessage =
+                    "The lease could not be found.";
+
+                return;
+            }
+
+
+            // -------------------------------------------------
+            // RE-CHECK DATABASE STATUS
+            // -------------------------------------------------
+
+            if (leaseToTerminate.LeaseStatus != "Active")
+            {
+                actionMessage =
+                    "Only active leases can be terminated.";
+
+
+                lease.Status =
+                    leaseToTerminate.LeaseStatus ??
+                    "Unknown";
+
+                return;
+            }
+
+
+            // -------------------------------------------------
+            // PRESERVE RECORD AND CHANGE STATUS ONLY
+            // -------------------------------------------------
+
+            leaseToTerminate.LeaseStatus =
+                "Terminated";
+
+
+            await db.SaveChangesAsync();
+
+
+            // -------------------------------------------------
+            // UPDATE VISIBLE GRID
+            // -------------------------------------------------
+
+            lease.Status =
+                "Terminated";
+
+
+            actionMessage =
+                $"Lease #{lease.LeaseId} terminated successfully.";
+        }
+        catch (Exception ex)
+        {
+            operationErrorMessage =
+                "The lease could not be terminated. Please try again.";
+
+
+            Console.WriteLine(
+                $"Error terminating lease {lease.LeaseId}: {ex}");
+        }
+    }
+
+
+    // =====================================================
+    // DISPLAY MODEL
+    // =====================================================
+
+    private sealed class LeaseDisplayItem
+    {
+        public int LeaseId { get; set; }
+
+        public string Property { get; set; } = "";
+
+        public string Tenant { get; set; } = "";
+
+        public string StartDate { get; set; } = "";
+
+        public string EndDate { get; set; } = "";
+
+        public string MonthlyRent { get; set; } = "";
+
+        public string Status { get; set; } = "";
+    }
+}
+
+
+<style>
+
+    /* =====================================================
+           LOAD ERROR
+           ===================================================== */
+
+    .management-load-error-card {
+        width: 100%;
+        border-left: 4px solid #b91c1c;
+    }
+
+        .management-load-error-card .rz-icon {
+            flex-shrink: 0;
+            color: #b91c1c;
+        }
+
+    .management-load-error-content {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .management-load-error-title {
+        color: #991b1b;
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
+    .management-load-error-description {
+        margin-top: 0.25rem;
+        color: #6b7280;
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+
+    .management-load-error-retry {
+        margin-top: 1rem;
+    }
+
+
+    /* =====================================================
+           OPERATION ERROR
+           ===================================================== */
+
+    .management-operation-error-card {
+        width: 100%;
+        color: #991b1b;
+        border-left: 4px solid #b91c1c;
+    }
+
+        .management-operation-error-card .rz-icon {
+            flex-shrink: 0;
+            color: #b91c1c;
+        }
+
+
+    /* =====================================================
+           MOBILE
+           ===================================================== */
+
+    @@media (max-width: 768px) {
+
+        .management-load-error-retry {
+            width: 100%;
+        }
+    }
+
+</style>

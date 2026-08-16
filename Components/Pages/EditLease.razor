@@ -1,0 +1,828 @@
+﻿@page "/leases/edit/{LeaseId:int}"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Edit Lease</PageTitle>
+
+<RadzenStack Gap="1.5rem"
+             class="form-page">
+
+
+    <!-- =====================================================
+         BACK LINK
+         ===================================================== -->
+
+    <div>
+
+        <RadzenLink Text="Back to Leases"
+                    Icon="arrow_back"
+                    Path="/leases"
+                    class="form-back-link" />
+
+    </div>
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div>
+
+        <div class="management-page-eyebrow">
+            LEASE MANAGEMENT
+        </div>
+
+        <RadzenText TextStyle="TextStyle.H3"
+                    Style="margin:0;">
+            Edit Lease
+        </RadzenText>
+
+        <RadzenText TextStyle="TextStyle.Body1"
+                    Style="margin-top:0.35rem;">
+            Update the selected lease details.
+        </RadzenText>
+
+    </div>
+
+
+    <!-- =====================================================
+         LOADING / ERROR
+         ===================================================== -->
+    @if (isLoading)
+    {
+        <RadzenCard class="form-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                           Size="ProgressBarCircularSize.Small" />
+
+                <RadzenText>
+                    Loading lease...
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrEmpty(loadErrorMessage))
+    {
+        <RadzenCard class="form-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @loadErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (model != null)
+    {
+
+        @if (!string.IsNullOrEmpty(saveErrorMessage))
+        {
+            <RadzenCard class="form-error-card">
+
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             Gap="0.75rem">
+
+                    <RadzenIcon Icon="error"
+                                Style="font-size:1.25rem;" />
+
+                    <RadzenText>
+                        @saveErrorMessage
+                    </RadzenText>
+
+                </RadzenStack>
+
+            </RadzenCard>
+        }
+
+
+        <!-- =================================================
+             FORM
+             ================================================= -->
+
+        <RadzenCard class="form-card">
+
+            <div class="form-card-header">
+
+                <div>
+
+                    <RadzenText TextStyle="TextStyle.H6"
+                                Style="margin:0;">
+                        Lease Details
+                    </RadzenText>
+
+                    <div class="form-card-description">
+                        Update the property, tenant, lease dates and financial details.
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="form-card-body">
+
+                <RadzenTemplateForm TItem="EditLeaseModel"
+                                    Data="@model"
+                                    Submit="@SaveLease">
+
+                    <RadzenStack Gap="1.5rem">
+
+
+                        <!-- =====================================
+                             PROPERTY / TENANT
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Property
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenDropDown TValue="int?"
+                                                Name="PropertyId"
+                                                Data="@propertyOptions"
+                                                TextProperty="DisplayName"
+                                                ValueProperty="PropertyId"
+                                                @bind-Value="@model.PropertyId"
+                                                Placeholder="Select a property"
+                                                AllowFiltering="true"
+                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="PropertyId"
+                                                         Text="Please select a property." />
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Tenant
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenDropDown TValue="int?"
+                                                Name="TenantId"
+                                                Data="@tenantOptions"
+                                                TextProperty="DisplayName"
+                                                ValueProperty="TenantId"
+                                                @bind-Value="@model.TenantId"
+                                                Placeholder="Select a tenant"
+                                                AllowFiltering="true"
+                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="TenantId"
+                                                         Text="Please select a tenant." />
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             START / END DATE
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Start Date
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenDatePicker TValue="DateTime?"
+                                                  Name="StartDate"
+                                                  @bind-Value="@model.StartDate"
+                                                  DateFormat="dd/MM/yyyy"
+                                                  Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="StartDate"
+                                                         Text="Start date is required." />
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    End Date
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenDatePicker TValue="DateTime?"
+                                                  Name="EndDate"
+                                                  @bind-Value="@model.EndDate"
+                                                  DateFormat="dd/MM/yyyy"
+                                                  Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="EndDate"
+                                                         Text="End date is required." />
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             RENT / DEPOSIT
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Monthly Rent
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenNumeric TValue="decimal?"
+                                               Name="MonthlyRent"
+                                               @bind-Value="@model.MonthlyRent"
+                                               Placeholder="Enter monthly rent"
+                                               Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="MonthlyRent"
+                                                         Text="Monthly rent is required." />
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Security Deposit
+                                </label>
+
+                                <RadzenNumeric TValue="decimal?"
+                                               @bind-Value="@model.SecurityDeposit"
+                                               Placeholder="Enter security deposit"
+                                               Style="width:100%;" />
+
+                                <div class="form-field-hint">
+                                    Leave blank if no security deposit is recorded.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             DUE DAY / STATUS
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Rent Due Day
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenNumeric TValue="int"
+                                               @bind-Value="@model.DueDay"
+                                               Min="1"
+                                               Max="31"
+                                               Style="width:100%;" />
+
+                                <div class="form-field-hint">
+                                    Enter a day between 1 and 31.
+                                </div>
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Lease Status
+                                </label>
+
+                                <RadzenDropDown TValue="string"
+                                                Data="@leaseStatuses"
+                                                @bind-Value="@model.LeaseStatus"
+                                                Style="width:100%;" />
+
+                                <div class="form-field-hint">
+                                    Changing a lease to Active will run the active-lease conflict check.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             FORM ACTIONS
+                             ===================================== -->
+
+                        <div class="form-actions">
+
+                            <RadzenButton Text="Cancel"
+                                          Icon="close"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Click="@Cancel" />
+
+                            <RadzenButton Text="Save Changes"
+                                          Icon="save"
+                                          ButtonType="ButtonType.Submit"
+                                          Disabled="@isSaving" />
+
+                        </div>
+
+
+                        @if (isSaving)
+                        {
+                            <div class="form-saving-message">
+
+                                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                                           Size="ProgressBarCircularSize.Small" />
+
+                                <RadzenText>
+                                    Saving changes...
+                                </RadzenText>
+
+                            </div>
+                        }
+
+                    </RadzenStack>
+
+                </RadzenTemplateForm>
+
+            </div>
+
+        </RadzenCard>
+    }
+
+</RadzenStack>
+
+
+@code
+{
+    [Parameter]
+    public int LeaseId { get; set; }
+
+
+    private EditLeaseModel? model;
+
+    private bool isLoading = true;
+
+    private bool isSaving;
+
+    private string? loadErrorMessage;
+
+    private string? saveErrorMessage;
+
+
+    private List<PropertyOption> propertyOptions = new();
+
+    private List<TenantOption> tenantOptions = new();
+
+
+    private readonly List<string> leaseStatuses =
+    [
+        "Active",
+        "Expired",
+        "Terminated"
+    ];
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        loadErrorMessage = null;
+
+        saveErrorMessage = null;
+
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // Load the selected lease.
+            var lease =
+                await db.Leases
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        item =>
+                            item.LeaseId == LeaseId);
+
+
+            if (lease == null)
+            {
+                loadErrorMessage =
+                    "The requested lease could not be found.";
+
+                return;
+            }
+
+
+            // Load property dropdown options.
+            propertyOptions =
+                await db.Properties
+                    .AsNoTracking()
+                    .OrderBy(property => property.Address)
+                    .Select(property =>
+                        new PropertyOption
+                        {
+                            PropertyId =
+                                property.PropertyId,
+
+                            DisplayName =
+                                property.Address +
+                                ", " +
+                                property.City
+                        })
+                    .ToListAsync();
+
+
+            // Load tenant dropdown options.
+            tenantOptions =
+                await db.Tenants
+                    .AsNoTracking()
+                    .OrderBy(tenant => tenant.LastName)
+                    .ThenBy(tenant => tenant.FirstName)
+                    .Select(tenant =>
+                        new TenantOption
+                        {
+                            TenantId =
+                                tenant.TenantId,
+
+                            DisplayName =
+                                tenant.FirstName +
+                                " " +
+                                tenant.LastName
+                        })
+                    .ToListAsync();
+
+
+            // Fill the edit form with the existing lease values.
+            model =
+                new EditLeaseModel
+                {
+                    PropertyId =
+                        lease.PropertyId,
+
+                    TenantId =
+                        lease.TenantId,
+
+                    StartDate =
+                        lease.StartDate,
+
+                    EndDate =
+                        lease.EndDate,
+
+                    MonthlyRent =
+                        lease.MonthlyRent,
+
+                    SecurityDeposit =
+                        lease.SecurityDeposit,
+
+                    LeaseStatus =
+                        lease.LeaseStatus ?? "Active",
+
+                    DueDay =
+                        lease.DueDay
+                };
+        }
+        catch (Exception ex)
+        {
+            loadErrorMessage =
+                "The selected lease could not be loaded. Please return to the lease page and try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    private async Task SaveLease(
+        EditLeaseModel value)
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+
+        try
+        {
+            isSaving = true;
+
+            saveErrorMessage = null;
+
+
+            if (!value.PropertyId.HasValue)
+            {
+                saveErrorMessage =
+                    "Please select a property.";
+
+                return;
+            }
+
+
+            if (!value.TenantId.HasValue)
+            {
+                saveErrorMessage =
+                    "Please select a tenant.";
+
+                return;
+            }
+
+
+            if (!value.StartDate.HasValue ||
+                !value.EndDate.HasValue)
+            {
+                saveErrorMessage =
+                    "Start date and end date are required.";
+
+                return;
+            }
+
+
+            if (value.EndDate.Value.Date <=
+                value.StartDate.Value.Date)
+            {
+                saveErrorMessage =
+                    "The lease end date must be after the start date.";
+
+                return;
+            }
+
+
+            if (!value.MonthlyRent.HasValue ||
+                value.MonthlyRent.Value <= 0)
+            {
+                saveErrorMessage =
+                    "Monthly rent must be greater than zero.";
+
+                return;
+            }
+
+
+            if (value.SecurityDeposit.HasValue &&
+                value.SecurityDeposit.Value < 0)
+            {
+                saveErrorMessage =
+                    "Security deposit cannot be negative.";
+
+                return;
+            }
+
+
+            if (value.DueDay < 1 ||
+                value.DueDay > 31)
+            {
+                saveErrorMessage =
+                    "Rent due day must be between 1 and 31.";
+
+                return;
+            }
+
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // Make sure the selected property still exists.
+            var propertyExists =
+                await db.Properties.AnyAsync(
+                    property =>
+                        property.PropertyId ==
+                        value.PropertyId.Value);
+
+
+            if (!propertyExists)
+            {
+                saveErrorMessage =
+                    "The selected property could not be found.";
+
+                return;
+            }
+
+
+            // Make sure the selected tenant still exists.
+            var tenantExists =
+                await db.Tenants.AnyAsync(
+                    tenant =>
+                        tenant.TenantId ==
+                        value.TenantId.Value);
+
+
+            if (!tenantExists)
+            {
+                saveErrorMessage =
+                    "The selected tenant could not be found.";
+
+                return;
+            }
+
+
+            // ==============================================
+            // ACTIVE LEASE CONFLICT VALIDATION
+            // ==============================================
+
+            //
+            // Only run the overlap check when the lease being
+            // saved has Active status.
+            //
+            // Unlike Add Lease, this query MUST exclude the
+            // current LeaseId. Otherwise the lease would
+            // detect its own date range as a conflict.
+            //
+
+            if (value.LeaseStatus == "Active")
+            {
+                var editedStartDate =
+                    value.StartDate.Value.Date;
+
+                var editedEndDate =
+                    value.EndDate.Value.Date;
+
+
+                var conflictingLease =
+                    await db.Leases
+                        .AsNoTracking()
+                        .Where(lease =>
+
+                            // Do not compare the lease
+                            // against itself.
+                            lease.LeaseId != LeaseId &&
+
+                            // Must belong to the same property.
+                            lease.PropertyId.HasValue &&
+
+                            lease.PropertyId.Value ==
+                                value.PropertyId.Value &&
+
+                            // Only another Active lease
+                            // should cause the conflict.
+                            lease.LeaseStatus ==
+                                "Active" &&
+
+                            // Date ranges overlap when:
+                            //
+                            // existing start <= edited end
+                            // AND
+                            // existing end >= edited start
+                            lease.StartDate <=
+                                editedEndDate &&
+
+                            lease.EndDate >=
+                                editedStartDate)
+                        .OrderBy(lease =>
+                            lease.StartDate)
+                        .FirstOrDefaultAsync();
+
+
+                if (conflictingLease != null)
+                {
+                    saveErrorMessage =
+                        $"This property already has another active lease " +
+                        $"(Lease #{conflictingLease.LeaseId}) from " +
+                        $"{conflictingLease.StartDate:dd MMM yyyy} to " +
+                        $"{conflictingLease.EndDate:dd MMM yyyy}. " +
+                        "The edited lease dates cannot overlap another active lease.";
+
+                    return;
+                }
+            }
+
+
+            // Load the lease using this DbContext.
+            var lease =
+                await db.Leases
+                    .FirstOrDefaultAsync(
+                        item =>
+                            item.LeaseId == LeaseId);
+
+
+            if (lease == null)
+            {
+                saveErrorMessage =
+                    "The lease could not be found.";
+
+                return;
+            }
+
+
+            // Apply the changes.
+            lease.PropertyId =
+                value.PropertyId.Value;
+
+            lease.TenantId =
+                value.TenantId.Value;
+
+            lease.StartDate =
+                value.StartDate.Value;
+
+            lease.EndDate =
+                value.EndDate.Value;
+
+            lease.MonthlyRent =
+                value.MonthlyRent.Value;
+
+            lease.SecurityDeposit =
+                value.SecurityDeposit;
+
+            lease.LeaseStatus =
+                value.LeaseStatus;
+
+            lease.DueDay =
+                value.DueDay;
+
+
+            await db.SaveChangesAsync();
+
+
+            Navigation.NavigateTo("/leases");
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage =
+                "The lease changes could not be saved. Please try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/leases");
+    }
+
+
+    private sealed class EditLeaseModel
+    {
+        public int? PropertyId { get; set; }
+
+        public int? TenantId { get; set; }
+
+        public DateTime? StartDate { get; set; }
+
+        public DateTime? EndDate { get; set; }
+
+        public decimal? MonthlyRent { get; set; }
+
+        public decimal? SecurityDeposit { get; set; }
+
+        public string LeaseStatus { get; set; } =
+            "Active";
+
+        public int DueDay { get; set; } = 1;
+    }
+
+
+    private sealed class PropertyOption
+    {
+        public int PropertyId { get; set; }
+
+        public string DisplayName { get; set; } = "";
+    }
+
+
+    private sealed class TenantOption
+    {
+        public int TenantId { get; set; }
+
+        public string DisplayName { get; set; } = "";
+    }
+}

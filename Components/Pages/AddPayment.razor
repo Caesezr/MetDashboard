@@ -1,0 +1,688 @@
+﻿@page "/payments/add"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Add Payment</PageTitle>
+
+<RadzenStack Gap="1.5rem"
+             class="form-page">
+
+
+    <!-- =====================================================
+         BACK LINK
+         ===================================================== -->
+
+    <div>
+
+        <RadzenLink Text="Back to Payments"
+                    Icon="arrow_back"
+                    Path="/payments"
+                    class="form-back-link" />
+
+    </div>
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div>
+
+        <div class="management-page-eyebrow">
+            FINANCIAL MANAGEMENT
+        </div>
+
+        <RadzenText TextStyle="TextStyle.H3"
+                    Style="margin:0;">
+            Add Payment
+        </RadzenText>
+
+        <RadzenText TextStyle="TextStyle.Body1"
+                    Style="margin-top:0.35rem;">
+            Record a payment against an existing lease.
+        </RadzenText>
+
+    </div>
+
+
+    <!-- =====================================================
+         LOADING / ERROR
+         ===================================================== -->
+    @if (isLoading)
+    {
+        <RadzenCard class="form-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                           Size="ProgressBarCircularSize.Small" />
+
+                <RadzenText>
+                    Loading lease information...
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrEmpty(loadErrorMessage))
+    {
+        <RadzenCard class="form-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @loadErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else
+    {
+
+        @if (!string.IsNullOrEmpty(saveErrorMessage))
+        {
+            <RadzenCard class="form-error-card">
+
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             Gap="0.75rem">
+
+                    <RadzenIcon Icon="error"
+                                Style="font-size:1.25rem;" />
+
+                    <RadzenText>
+                        @saveErrorMessage
+                    </RadzenText>
+
+                </RadzenStack>
+
+            </RadzenCard>
+        }
+
+
+        <!-- =================================================
+             FORM
+             ================================================= -->
+
+        <RadzenCard class="form-card">
+
+            <div class="form-card-header">
+
+                <div>
+
+                    <RadzenText TextStyle="TextStyle.H6"
+                                Style="margin:0;">
+                        Payment Details
+                    </RadzenText>
+
+                    <div class="form-card-description">
+                        Select the lease and record the payment amount, date and payment information.
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="form-card-body">
+
+                <RadzenTemplateForm TItem="AddPaymentModel"
+                                    Data="@model"
+                                    Submit="@SavePayment">
+
+                    <RadzenStack Gap="1.5rem">
+
+
+                        <!-- =====================================
+                             LEASE
+                             ===================================== -->
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Lease
+                                <span class="form-required">*</span>
+                            </label>
+
+                            <RadzenDropDown TValue="int?"
+                                            Name="LeaseId"
+                                            Data="@leaseOptions"
+                                            TextProperty="DisplayName"
+                                            ValueProperty="LeaseId"
+                                            @bind-Value="@model.LeaseId"
+                                            Placeholder="Select a lease"
+                                            AllowFiltering="true"
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            Style="width:100%;" />
+
+                            <RadzenRequiredValidator Component="LeaseId"
+                                                     Text="Please select a lease." />
+
+                            <div class="form-field-hint">
+                                The list includes the lease number, property, tenant and current lease status.
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             AMOUNT / DATE
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Payment Amount
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenNumeric TValue="decimal?"
+                                               Name="Amount"
+                                               @bind-Value="@model.Amount"
+                                               Min="@(0.01m)"
+                                               Step="0.01"
+                                               Placeholder="Enter payment amount"
+                                               Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="Amount"
+                                                         Text="Payment amount is required." />
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Payment Date
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenDatePicker TValue="DateTime?"
+                                                  Name="PaymentDate"
+                                                  @bind-Value="@model.PaymentDate"
+                                                  DateFormat="dd/MM/yyyy"
+                                                  Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="PaymentDate"
+                                                         Text="Payment date is required." />
+
+                                <div class="form-field-hint">
+                                    The payment date must fall within the selected lease period.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             METHOD / RECEIVED BY
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Payment Method
+                                </label>
+
+                                <RadzenDropDown TValue="string"
+                                                Data="@paymentMethods"
+                                                @bind-Value="@model.PaymentMethod"
+                                                Placeholder="Select payment method"
+                                                Style="width:100%;" />
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Received By
+                                </label>
+
+                                <RadzenDropDown TValue="int?"
+                                                Data="@employeeOptions"
+                                                TextProperty="DisplayName"
+                                                ValueProperty="EmployeeId"
+                                                @bind-Value="@model.ReceivedBy"
+                                                Placeholder="Select employee"
+                                                AllowClear="true"
+                                                AllowFiltering="true"
+                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                Style="width:100%;" />
+
+                                <div class="form-field-hint">
+                                    Optional. Select the employee who received or recorded the payment.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             FORM ACTIONS
+                             ===================================== -->
+
+                        <div class="form-actions">
+
+                            <RadzenButton Text="Cancel"
+                                          Icon="close"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Click="@Cancel" />
+
+                            <RadzenButton Text="Save Payment"
+                                          Icon="payments"
+                                          ButtonType="ButtonType.Submit"
+                                          Disabled="@isSaving" />
+
+                        </div>
+
+
+                        @if (isSaving)
+                        {
+                            <div class="form-saving-message">
+
+                                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                                           Size="ProgressBarCircularSize.Small" />
+
+                                <RadzenText>
+                                    Saving payment...
+                                </RadzenText>
+
+                            </div>
+                        }
+
+                    </RadzenStack>
+
+                </RadzenTemplateForm>
+
+            </div>
+
+        </RadzenCard>
+    }
+
+</RadzenStack>
+
+
+@code
+{
+    private AddPaymentModel model =
+        new()
+        {
+            PaymentDate =
+                DateTime.Today,
+
+            PaymentMethod =
+                "Bank Transfer"
+        };
+
+
+    private bool isLoading = true;
+
+    private bool isSaving;
+
+    private string? loadErrorMessage;
+
+    private string? saveErrorMessage;
+
+
+    private List<LeaseOption> leaseOptions = new();
+
+    private List<EmployeeOption> employeeOptions = new();
+
+
+    private readonly List<string> paymentMethods =
+    [
+        "Credit Card",
+        "Check",
+        "Bank Transfer",
+        "Cash"
+    ];
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // Load leases.
+            var leases =
+                await db.Leases
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // Load properties.
+            var properties =
+                await db.Properties
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // Load tenants.
+            var tenants =
+                await db.Tenants
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // Load employees.
+            employeeOptions =
+                await db.Employees
+                    .AsNoTracking()
+                    .OrderBy(employee =>
+                        employee.LastName)
+                    .ThenBy(employee =>
+                        employee.FirstName)
+                    .Select(employee =>
+                        new EmployeeOption
+                        {
+                            EmployeeId =
+                                employee.EmployeeId,
+
+                            DisplayName =
+                                employee.FirstName +
+                                " " +
+                                employee.LastName
+                        })
+                    .ToListAsync();
+
+
+            var propertyLookup =
+                properties.ToDictionary(
+                    property =>
+                        property.PropertyId,
+                    property =>
+                        property.Address);
+
+
+            var tenantLookup =
+                tenants.ToDictionary(
+                    tenant =>
+                        tenant.TenantId,
+                    tenant =>
+                        $"{tenant.FirstName} {tenant.LastName}");
+
+
+            leaseOptions =
+                leases
+                    .Select(lease =>
+                    {
+                        var propertyName =
+                            lease.PropertyId.HasValue &&
+                            propertyLookup.TryGetValue(
+                                lease.PropertyId.Value,
+                                out var propertyAddress)
+                                ? propertyAddress
+                                : "Unknown Property";
+
+
+                        var tenantName =
+                            lease.TenantId.HasValue &&
+                            tenantLookup.TryGetValue(
+                                lease.TenantId.Value,
+                                out var tenantDisplayName)
+                                ? tenantDisplayName
+                                : "Unknown Tenant";
+
+
+                        var leaseStatus =
+                            lease.LeaseStatus
+                            ?? "Unknown";
+
+
+                        return new LeaseOption
+                        {
+                            LeaseId =
+                                lease.LeaseId,
+
+                            DisplayName =
+                                $"Lease #{lease.LeaseId} - " +
+                                $"{propertyName} - " +
+                                $"{tenantName} - " +
+                                $"{leaseStatus}"
+                        };
+                    })
+                    .OrderByDescending(
+                        lease =>
+                            lease.LeaseId)
+                    .ToList();
+        }
+        catch (Exception ex)
+        {
+            loadErrorMessage =
+                "The lease information could not be loaded. Please return to the payments page and try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    private async Task SavePayment(
+        AddPaymentModel value)
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+
+        try
+        {
+            isSaving = true;
+
+            saveErrorMessage = null;
+
+
+            if (!value.LeaseId.HasValue)
+            {
+                saveErrorMessage =
+                    "Please select a lease.";
+
+                return;
+            }
+
+
+            if (!value.Amount.HasValue ||
+                value.Amount.Value <= 0)
+            {
+                saveErrorMessage =
+                    "Payment amount must be greater than zero.";
+
+                return;
+            }
+
+
+            if (!value.PaymentDate.HasValue)
+            {
+                saveErrorMessage =
+                    "Payment date is required.";
+
+                return;
+            }
+
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // ==============================================
+            // LOAD AND VALIDATE SELECTED LEASE
+            // ==============================================
+
+            var selectedLease =
+                await db.Leases
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        lease =>
+                            lease.LeaseId ==
+                            value.LeaseId.Value);
+
+
+            if (selectedLease == null)
+            {
+                saveErrorMessage =
+                    "The selected lease could not be found.";
+
+                return;
+            }
+
+
+            // ==============================================
+            // PAYMENT DATE / LEASE DATE VALIDATION
+            // ==============================================
+
+            var paymentDate =
+                value.PaymentDate.Value.Date;
+
+            var leaseStartDate =
+                selectedLease.StartDate.Date;
+
+            var leaseEndDate =
+                selectedLease.EndDate.Date;
+
+
+            // A payment may be recorded on the lease start
+            // date or lease end date, but not outside the
+            // lease period.
+
+            if (paymentDate < leaseStartDate ||
+                paymentDate > leaseEndDate)
+            {
+                saveErrorMessage =
+                    $"The payment date must be between " +
+                    $"{leaseStartDate:dd MMM yyyy} and " +
+                    $"{leaseEndDate:dd MMM yyyy} for " +
+                    $"Lease #{selectedLease.LeaseId}.";
+
+                return;
+            }
+
+
+            // ==============================================
+            // RECEIVED BY EMPLOYEE VALIDATION
+            // ==============================================
+
+            if (value.ReceivedBy.HasValue)
+            {
+                var employeeExists =
+                    await db.Employees.AnyAsync(
+                        employee =>
+                            employee.EmployeeId ==
+                            value.ReceivedBy.Value);
+
+
+                if (!employeeExists)
+                {
+                    saveErrorMessage =
+                        "The selected employee who received the payment could not be found.";
+
+                    return;
+                }
+            }
+
+
+            var payment =
+                new Payment
+                {
+                    LeaseId =
+                        value.LeaseId.Value,
+
+                    Amount =
+                        value.Amount.Value,
+
+                    PaymentDate =
+                        value.PaymentDate.Value,
+
+                    PaymentMethod =
+                        value.PaymentMethod,
+
+                    ReceivedBy =
+                        value.ReceivedBy
+                };
+
+
+            db.Payments.Add(payment);
+
+
+            await db.SaveChangesAsync();
+
+
+            Navigation.NavigateTo("/payments");
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage =
+                "The payment could not be saved. Please try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/payments");
+    }
+
+
+    private sealed class AddPaymentModel
+    {
+        public int? LeaseId { get; set; }
+
+        public decimal? Amount { get; set; }
+
+        public DateTime? PaymentDate { get; set; }
+
+        public string? PaymentMethod { get; set; }
+
+        public int? ReceivedBy { get; set; }
+    }
+
+
+    private sealed class LeaseOption
+    {
+        public int LeaseId { get; set; }
+
+        public string DisplayName { get; set; } = "";
+    }
+
+
+    private sealed class EmployeeOption
+    {
+        public int EmployeeId { get; set; }
+
+        public string DisplayName { get; set; } = "";
+    }
+}

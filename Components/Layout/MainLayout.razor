@@ -1,0 +1,135 @@
+﻿@inherits LayoutComponentBase
+
+<RadzenLayout>
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+
+    <RadzenHeader>
+
+        <div class="app-header">
+
+            <!-- MOBILE SIDEBAR TOGGLE -->
+
+            <RadzenSidebarToggle Icon="menu"
+                                 ToggleAriaLabel="Toggle navigation"
+                                 Click="@(() => sidebarExpanded = !sidebarExpanded)"
+                                 class="app-sidebar-toggle" />
+
+
+            <!-- APPLICATION BRAND -->
+
+            <div class="app-header-brand">
+
+                <RadzenIcon Icon="apartment"
+                            Style="font-size:1.7rem;" />
+
+                <div class="app-header-brand-text">
+
+                    <div class="app-header-title">
+                        Property Management
+                    </div>
+
+                    <div class="app-header-subtitle">
+                        Management Dashboard
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </RadzenHeader>
+
+
+    <!-- =====================================================
+         SIDEBAR
+         ===================================================== -->
+
+    <RadzenSidebar @bind-Expanded="@sidebarExpanded"
+                   Responsive="true"
+                   ResponsiveMaxWidth="768px"
+                   Style="width:240px;">
+
+        <div class="sidebar-heading">
+            Navigation
+        </div>
+
+        <RadzenPanelMenu DisplayStyle="MenuItemDisplayStyle.IconAndText"
+                         ShowArrow="false">
+
+            <RadzenPanelMenuItem Text="Dashboard"
+                                 Path="/"
+                                 Icon="dashboard" />
+
+            <RadzenPanelMenuItem Text="Properties"
+                                 Path="/properties"
+                                 Icon="home" />
+
+            <RadzenPanelMenuItem Text="Tenants"
+                                 Path="/tenants"
+                                 Icon="people" />
+
+            <RadzenPanelMenuItem Text="Owners"
+                                 Path="/owners"
+                                 Icon="person" />
+
+            <RadzenPanelMenuItem Text="Leases"
+                                 Path="/leases"
+                                 Icon="description" />
+
+            <RadzenPanelMenuItem Text="Payments"
+                                 Path="/payments"
+                                 Icon="payments" />
+
+            <RadzenPanelMenuItem Text="Maintenance"
+                                 Path="/maintenance"
+                                 Icon="build" />
+
+        </RadzenPanelMenu>
+
+    </RadzenSidebar>
+
+
+    <!-- =====================================================
+         MAIN CONTENT
+         ===================================================== -->
+
+    <RadzenBody>
+
+        <main class="app-main-content">
+            @Body
+        </main>
+
+    </RadzenBody>
+
+
+    <!-- =====================================================
+         FOOTER
+         ===================================================== -->
+
+    <RadzenFooter>
+
+        <div class="app-footer">
+
+            Property Management Dashboard
+
+            <span class="app-footer-separator">
+                •
+            </span>
+
+            @DateTime.Now.Year
+
+        </div>
+
+    </RadzenFooter>
+
+</RadzenLayout>
+
+
+@code
+{
+    private bool sidebarExpanded = true;
+}

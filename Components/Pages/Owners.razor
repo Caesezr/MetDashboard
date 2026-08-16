@@ -1,0 +1,545 @@
+﻿@page "/owners"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+<PageTitle>Owners</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div class="management-page-header">
+
+        <div>
+
+            <div class="management-page-eyebrow">
+                OWNERSHIP MANAGEMENT
+            </div>
+
+            <RadzenText TextStyle="TextStyle.H3"
+                        Style="margin:0;">
+                Property Owners
+            </RadzenText>
+
+            <RadzenText TextStyle="TextStyle.Body1"
+                        Style="margin-top:0.35rem;">
+                View and manage registered property owners.
+            </RadzenText>
+
+        </div>
+
+
+        <div class="management-page-actions">
+
+            <RadzenLink Text="Add Owner"
+                        Icon="person_add"
+                        Path="/owners/add" />
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         ACTION MESSAGE
+         ===================================================== -->
+    @if (!string.IsNullOrEmpty(actionMessage))
+    {
+        <RadzenCard class="management-message-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="info"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @actionMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+
+
+    <!-- =====================================================
+         OPERATION ERROR
+         ===================================================== -->
+    @if (!string.IsNullOrEmpty(operationErrorMessage))
+    {
+        <RadzenCard class="management-operation-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @operationErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+
+
+    <!-- =====================================================
+         LOADING / LOAD ERROR
+         ===================================================== -->
+    @if (isLoading)
+    {
+        <RadzenCard>
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                           Size="ProgressBarCircularSize.Small" />
+
+                <RadzenText>
+                    Loading owners...
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrEmpty(loadErrorMessage))
+    {
+        <RadzenCard class="management-load-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Start"
+                         Gap="1rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.5rem;" />
+
+
+                <div class="management-load-error-content">
+
+                    <div class="management-load-error-title">
+                        Unable to load owners
+                    </div>
+
+                    <div class="management-load-error-description">
+                        @loadErrorMessage
+                    </div>
+
+
+                    <RadzenButton Text="Retry"
+                                  Icon="refresh"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Click="@(_ => LoadOwnersAsync())"
+                                  class="management-load-error-retry" />
+
+                </div>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else
+    {
+        <!-- =================================================
+             GRID CARD
+             ================================================= -->
+
+        <RadzenCard class="management-grid-card">
+
+            <div class="management-grid-header">
+
+                <div>
+
+                    <RadzenText TextStyle="TextStyle.H6"
+                                Style="margin:0;">
+                        Owner Directory
+                    </RadzenText>
+
+                    <div class="management-grid-summary">
+                        @owners.Count @(owners.Count == 1 ? "owner" : "owners") registered
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <RadzenDataGrid TItem="Owner"
+                            Data="@owners"
+                            AllowPaging="true"
+                            PageSize="10"
+                            AllowSorting="true"
+                            AllowFiltering="true"
+                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            class="management-grid"
+                            Style="width:100%;">
+
+                <Columns>
+
+                    <RadzenDataGridColumn TItem="Owner"
+                                          Property="OwnerId"
+                                          Title="ID"
+                                          Width="75px" />
+
+
+                    <RadzenDataGridColumn TItem="Owner"
+                                          Property="FirstName"
+                                          Title="First Name"
+                                          Width="150px">
+
+                        <Template Context="owner">
+
+                            <div class="primary-grid-value">
+                                @owner.FirstName
+                            </div>
+
+                        </Template>
+
+                    </RadzenDataGridColumn>
+
+
+                    <RadzenDataGridColumn TItem="Owner"
+                                          Property="LastName"
+                                          Title="Last Name"
+                                          Width="150px">
+
+                        <Template Context="owner">
+
+                            <div class="primary-grid-value">
+                                @owner.LastName
+                            </div>
+
+                        </Template>
+
+                    </RadzenDataGridColumn>
+
+
+                    <RadzenDataGridColumn TItem="Owner"
+                                          Property="Email"
+                                          Title="Email"
+                                          Width="240px" />
+
+
+                    <RadzenDataGridColumn TItem="Owner"
+                                          Property="Phone"
+                                          Title="Phone"
+                                          Width="150px" />
+
+
+                    <RadzenDataGridColumn TItem="Owner"
+                                          Property="MailingAddress"
+                                          Title="Mailing Address"
+                                          Width="260px" />
+
+
+                    <RadzenDataGridColumn TItem="Owner"
+                                          Title="Actions"
+                                          Filterable="false"
+                                          Sortable="false"
+                                          TextAlign="TextAlign.Center"
+                                          Width="160px">
+
+                        <Template Context="owner">
+
+                            <RadzenStack Orientation="Orientation.Horizontal"
+                                         JustifyContent="JustifyContent.Center"
+                                         AlignItems="AlignItems.Center"
+                                         Gap="0.5rem">
+
+                                <RadzenLink Text="Edit"
+                                            Icon="edit"
+                                            Path="@($"/owners/edit/{owner.OwnerId}")" />
+
+                                <RadzenButton Icon="delete"
+                                              Title="Delete owner"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Size="ButtonSize.Small"
+                                              Click="@(_ => DeleteOwner(owner))" />
+
+                            </RadzenStack>
+
+                        </Template>
+
+                    </RadzenDataGridColumn>
+
+                </Columns>
+
+            </RadzenDataGrid>
+
+        </RadzenCard>
+    }
+
+</RadzenStack>
+
+
+@code
+{
+    // =====================================================
+    // PAGE STATE
+    // =====================================================
+
+    private bool isLoading = true;
+
+    private string? loadErrorMessage;
+
+    private string? operationErrorMessage;
+
+    private string? actionMessage;
+
+    private List<Owner> owners = new();
+
+
+    // =====================================================
+    // INITIAL LOAD
+    // =====================================================
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOwnersAsync();
+    }
+
+
+    // =====================================================
+    // LOAD OWNERS
+    // =====================================================
+
+    private async Task LoadOwnersAsync()
+    {
+        isLoading = true;
+
+        loadErrorMessage = null;
+
+        operationErrorMessage = null;
+
+        actionMessage = null;
+
+
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            owners =
+                await db.Owners
+                    .AsNoTracking()
+                    .OrderBy(
+                        owner =>
+                            owner.LastName)
+                    .ThenBy(
+                        owner =>
+                            owner.FirstName)
+                    .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            loadErrorMessage =
+                "The owner records could not be loaded. Please try again.";
+
+
+            Console.WriteLine(
+                $"Error loading owners: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    // =====================================================
+    // DELETE OWNER
+    // =====================================================
+
+    private async Task DeleteOwner(Owner owner)
+    {
+        actionMessage = null;
+
+        operationErrorMessage = null;
+
+
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // -------------------------------------------------
+            // CHECK FOR PROPERTY RELATIONSHIPS
+            // -------------------------------------------------
+
+            var hasProperties =
+                await db.Set<Propertyowner>()
+                    .AnyAsync(
+                        record =>
+                            record.OwnerId ==
+                            owner.OwnerId);
+
+
+            // -------------------------------------------------
+            // PROTECT RELATED RECORDS
+            // -------------------------------------------------
+
+            if (hasProperties)
+            {
+                actionMessage =
+                    "This owner cannot be deleted because they are linked to one or more properties.";
+
+                return;
+            }
+
+
+            // -------------------------------------------------
+            // CONFIRM DELETE
+            // -------------------------------------------------
+
+            var confirmed =
+                await JS.InvokeAsync<bool>(
+                    "confirm",
+                    $"Are you sure you want to delete {owner.FirstName} {owner.LastName}?");
+
+
+            if (!confirmed)
+            {
+                return;
+            }
+
+
+            // -------------------------------------------------
+            // FIND OWNER AGAIN USING THIS CONTEXT
+            // -------------------------------------------------
+
+            var ownerToDelete =
+                await db.Owners
+                    .FirstOrDefaultAsync(
+                        item =>
+                            item.OwnerId ==
+                            owner.OwnerId);
+
+
+            if (ownerToDelete == null)
+            {
+                actionMessage =
+                    "The owner could not be found.";
+
+                return;
+            }
+
+
+            // -------------------------------------------------
+            // DELETE FROM MYSQL
+            // -------------------------------------------------
+
+            db.Owners.Remove(
+                ownerToDelete);
+
+
+            await db.SaveChangesAsync();
+
+
+            // -------------------------------------------------
+            // UPDATE VISIBLE GRID
+            // -------------------------------------------------
+
+            owners.Remove(
+                owner);
+
+
+            actionMessage =
+                "Owner deleted successfully.";
+        }
+        catch (Exception ex)
+        {
+            operationErrorMessage =
+                "The owner could not be deleted. Please try again.";
+
+
+            Console.WriteLine(
+                $"Error deleting owner {owner.OwnerId}: {ex}");
+        }
+    }
+}
+
+
+<style>
+
+    /* =====================================================
+           LOAD ERROR
+           ===================================================== */
+
+    .management-load-error-card {
+        width: 100%;
+        border-left: 4px solid #b91c1c;
+    }
+
+        .management-load-error-card .rz-icon {
+            flex-shrink: 0;
+            color: #b91c1c;
+        }
+
+    .management-load-error-content {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .management-load-error-title {
+        color: #991b1b;
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
+    .management-load-error-description {
+        margin-top: 0.25rem;
+        color: #6b7280;
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+
+    .management-load-error-retry {
+        margin-top: 1rem;
+    }
+
+
+    /* =====================================================
+           OPERATION ERROR
+           ===================================================== */
+
+    .management-operation-error-card {
+        width: 100%;
+        color: #991b1b;
+        border-left: 4px solid #b91c1c;
+    }
+
+        .management-operation-error-card .rz-icon {
+            flex-shrink: 0;
+            color: #b91c1c;
+        }
+
+
+    /* =====================================================
+           MOBILE
+           ===================================================== */
+
+    @@media (max-width: 768px) {
+
+        .management-load-error-retry {
+            width: 100%;
+        }
+    }
+
+</style>

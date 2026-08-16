@@ -1,0 +1,384 @@
+﻿@page "/properties/add"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Add Property</PageTitle>
+
+<RadzenStack Gap="1.5rem"
+             class="form-page">
+
+
+    <!-- =====================================================
+         BACK LINK
+         ===================================================== -->
+
+    <div>
+
+        <RadzenLink Text="Back to Properties"
+                    Icon="arrow_back"
+                    Path="/properties"
+                    class="form-back-link" />
+
+    </div>
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div>
+
+        <div class="management-page-eyebrow">
+            PROPERTY MANAGEMENT
+        </div>
+
+        <RadzenText TextStyle="TextStyle.H3"
+                    Style="margin:0;">
+            Add Property
+        </RadzenText>
+
+        <RadzenText TextStyle="TextStyle.Body1"
+                    Style="margin-top:0.35rem;">
+            Add a new property to the portfolio.
+        </RadzenText>
+
+    </div>
+
+
+    <!-- =====================================================
+         ERROR MESSAGE
+         ===================================================== -->
+    @if (!string.IsNullOrEmpty(saveErrorMessage))
+    {
+        <RadzenCard class="form-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @saveErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+
+
+    <!-- =====================================================
+         FORM
+         ===================================================== -->
+
+    <RadzenCard class="form-card">
+
+        <div class="form-card-header">
+
+            <div>
+
+                <RadzenText TextStyle="TextStyle.H6"
+                            Style="margin:0;">
+                    Property Details
+                </RadzenText>
+
+                <div class="form-card-description">
+                    Enter the address, location and purchasing information for the property.
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="form-card-body">
+
+            <RadzenTemplateForm TItem="AddPropertyModel"
+                                Data="@model"
+                                Submit="@SaveProperty">
+
+                <RadzenStack Gap="1.5rem">
+
+
+                    <!-- =========================================
+                         ADDRESS
+                         ========================================= -->
+
+                    <div class="form-field">
+
+                        <label class="form-label">
+                            Address
+                            <span class="form-required">*</span>
+                        </label>
+
+                        <RadzenTextBox Name="Address"
+                                       @bind-Value="@model.Address"
+                                       Placeholder="e.g. 25 High Street"
+                                       Style="width:100%;" />
+
+                        <RadzenRequiredValidator Component="Address"
+                                                 Text="Address is required." />
+
+                    </div>
+
+
+                    <!-- =========================================
+                         CITY / STATE
+                         ========================================= -->
+
+                    <div class="form-grid">
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                City
+                                <span class="form-required">*</span>
+                            </label>
+
+                            <RadzenTextBox Name="City"
+                                           @bind-Value="@model.City"
+                                           Placeholder="e.g. London"
+                                           Style="width:100%;" />
+
+                            <RadzenRequiredValidator Component="City"
+                                                     Text="City is required." />
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                State / Region
+                                <span class="form-required">*</span>
+                            </label>
+
+                            <RadzenTextBox Name="State"
+                                           @bind-Value="@model.State"
+                                           Placeholder="e.g. Greater London"
+                                           Style="width:100%;" />
+
+                            <RadzenRequiredValidator Component="State"
+                                                     Text="State or region is required." />
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =========================================
+                         POSTCODE / PROPERTY TYPE
+                         ========================================= -->
+
+                    <div class="form-grid">
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                ZIP / Postcode
+                                <span class="form-required">*</span>
+                            </label>
+
+                            <RadzenTextBox Name="ZipCode"
+                                           @bind-Value="@model.ZipCode"
+                                           Placeholder="e.g. TW13 4AB"
+                                           Style="width:100%;" />
+
+                            <RadzenRequiredValidator Component="ZipCode"
+                                                     Text="ZIP code or postcode is required." />
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Property Type
+                            </label>
+
+                            <RadzenDropDown TValue="string"
+                                            Data="@propertyTypes"
+                                            @bind-Value="@model.PropertyType"
+                                            Placeholder="Select property type"
+                                            Style="width:100%;" />
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =========================================
+                         PURCHASE PRICE
+                         ========================================= -->
+
+                    <div class="form-field">
+
+                        <label class="form-label">
+                            Purchase Price
+                        </label>
+
+                        <RadzenNumeric TValue="decimal?"
+                                       @bind-Value="@model.PurchasePrice"
+                                       Placeholder="Enter purchase price"
+                                       Style="width:100%;" />
+
+                        <div class="form-field-hint">
+                            Enter the property's purchase price if known.
+                        </div>
+
+                    </div>
+
+
+                    <!-- =========================================
+                         FORM ACTIONS
+                         ========================================= -->
+
+                    <div class="form-actions">
+
+                        <RadzenButton Text="Cancel"
+                                      Icon="close"
+                                      ButtonStyle="ButtonStyle.Light"
+                                      Click="@Cancel" />
+
+                        <RadzenButton Text="Save Property"
+                                      Icon="save"
+                                      ButtonType="ButtonType.Submit"
+                                      Disabled="@isSaving" />
+
+                    </div>
+
+
+                    @if (isSaving)
+                    {
+                        <div class="form-saving-message">
+
+                            <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                                       Size="ProgressBarCircularSize.Small" />
+
+                            <RadzenText>
+                                Saving property...
+                            </RadzenText>
+
+                        </div>
+                    }
+
+                </RadzenStack>
+
+            </RadzenTemplateForm>
+
+        </div>
+
+    </RadzenCard>
+
+</RadzenStack>
+
+
+@code
+{
+    private AddPropertyModel model = new();
+
+    private bool isSaving;
+
+    private string? saveErrorMessage;
+
+
+    private readonly List<string> propertyTypes =
+    [
+        "Single Family",
+        "Apartment",
+        "Commercial",
+        "Condo"
+    ];
+
+
+    private async Task SaveProperty(AddPropertyModel value)
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+
+            saveErrorMessage = null;
+
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            var newProperty =
+                new Property
+                {
+                    Address =
+                        value.Address.Trim(),
+
+                    City =
+                        value.City.Trim(),
+
+                    State =
+                        value.State.Trim(),
+
+                    ZipCode =
+                        value.ZipCode.Trim(),
+
+                    PropertyType =
+                        value.PropertyType,
+
+                    PurchasePrice =
+                        value.PurchasePrice
+                };
+
+
+            db.Properties.Add(newProperty);
+
+            await db.SaveChangesAsync();
+
+
+            Navigation.NavigateTo(
+                $"/properties/{newProperty.PropertyId}");
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage =
+                "The property could not be saved. Please try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/properties");
+    }
+
+
+    private sealed class AddPropertyModel
+    {
+        public string Address { get; set; } = "";
+
+        public string City { get; set; } = "";
+
+        public string State { get; set; } = "";
+
+        public string ZipCode { get; set; } = "";
+
+        public string? PropertyType { get; set; }
+
+        public decimal? PurchasePrice { get; set; }
+    }
+}

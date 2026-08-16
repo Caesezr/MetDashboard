@@ -1,0 +1,919 @@
+﻿@page "/properties/{PropertyId:int}"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+@using System.Globalization
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+<PageTitle>Property Details</PageTitle>
+
+
+@if (isLoading)
+{
+    <RadzenCard>
+        <RadzenText>
+            Loading property details...
+        </RadzenText>
+    </RadzenCard>
+}
+else if (!string.IsNullOrEmpty(loadErrorMessage))
+{
+    <RadzenStack Gap="1rem">
+
+        <RadzenLink Text="← Back to Properties"
+                    Path="/properties" />
+
+        <RadzenCard class="form-error-card">
+
+            <RadzenStack Gap="0.75rem">
+
+                <RadzenText TextStyle="TextStyle.H5"
+                            Style="margin:0;">
+                    Unable to load property
+                </RadzenText>
+
+                <RadzenText>
+                    @loadErrorMessage
+                </RadzenText>
+
+                <div>
+                    <RadzenButton Text="Retry"
+                                  Icon="refresh"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Click="@(_ => LoadPropertyDetailsAsync())" />
+                </div>
+
+            </RadzenStack>
+
+        </RadzenCard>
+
+    </RadzenStack>
+}
+else if (propertyRecord == null)
+{
+    <RadzenStack Gap="1rem">
+
+        <RadzenLink Text="← Back to Properties"
+                    Path="/properties" />
+
+        <RadzenCard>
+
+            <RadzenText TextStyle="TextStyle.H5">
+                Property Not Found
+            </RadzenText>
+
+            <RadzenText>
+                The requested property could not be found.
+            </RadzenText>
+
+        </RadzenCard>
+
+    </RadzenStack>
+}
+else
+{
+    <RadzenStack Gap="1rem">
+
+        <!-- BACK BUTTON -->
+
+        <RadzenLink Text="← Back to Properties"
+                    Path="/properties" />
+
+
+        @if (!string.IsNullOrEmpty(actionMessage))
+        {
+            <RadzenCard>
+
+                <RadzenText>
+                    @actionMessage
+                </RadzenText>
+
+            </RadzenCard>
+        }
+
+
+        @if (!string.IsNullOrEmpty(operationErrorMessage))
+        {
+            <RadzenCard class="form-error-card">
+
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             Gap="0.75rem">
+
+                    <RadzenIcon Icon="error"
+                                Style="font-size:1.25rem;" />
+
+                    <RadzenText>
+                        @operationErrorMessage
+                    </RadzenText>
+
+                </RadzenStack>
+
+            </RadzenCard>
+        }
+
+
+        <!-- PAGE HEADER -->
+
+        <div>
+
+            <RadzenText TextStyle="TextStyle.H3">
+                @propertyRecord.Address
+            </RadzenText>
+
+            <RadzenText TextStyle="TextStyle.Body1">
+                @propertyRecord.City, @propertyRecord.State
+            </RadzenText>
+
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- PROPERTY INFORMATION                      -->
+        <!-- ========================================== -->
+
+        <RadzenRow Gap="1rem">
+
+            <RadzenColumn Size="12" SizeLG="8">
+
+                <RadzenCard>
+
+                    <RadzenText TextStyle="TextStyle.H5"
+                                class="rz-mb-3">
+                        Property Information
+                    </RadzenText>
+
+
+                    <RadzenRow Gap="1rem">
+
+                        <RadzenColumn Size="12" SizeMD="6">
+
+                            <RadzenText TextStyle="TextStyle.Overline">
+                                PROPERTY ID
+                            </RadzenText>
+
+                            <RadzenText TextStyle="TextStyle.H6">
+                                @propertyRecord.PropertyId
+                            </RadzenText>
+
+                        </RadzenColumn>
+
+
+                        <RadzenColumn Size="12" SizeMD="6">
+
+                            <RadzenText TextStyle="TextStyle.Overline">
+                                PROPERTY TYPE
+                            </RadzenText>
+
+                            <RadzenText TextStyle="TextStyle.H6">
+                                @(propertyRecord.PropertyType ?? "Unknown")
+                            </RadzenText>
+
+                        </RadzenColumn>
+
+
+                        <RadzenColumn Size="12" SizeMD="6">
+
+                            <RadzenText TextStyle="TextStyle.Overline">
+                                LOCATION
+                            </RadzenText>
+
+                            <RadzenText TextStyle="TextStyle.H6">
+                                @propertyRecord.City, @propertyRecord.State
+                            </RadzenText>
+
+                        </RadzenColumn>
+
+
+                        <RadzenColumn Size="12" SizeMD="6">
+
+                            <RadzenText TextStyle="TextStyle.Overline">
+                                PURCHASE VALUE
+                            </RadzenText>
+
+                            <RadzenText TextStyle="TextStyle.H6">
+                                @FormatCurrency(propertyRecord.PurchasePrice ?? 0m)
+                            </RadzenText>
+
+                        </RadzenColumn>
+
+                    </RadzenRow>
+
+                </RadzenCard>
+
+            </RadzenColumn>
+
+
+            <!-- FINANCIAL SUMMARY -->
+
+            <RadzenColumn Size="12" SizeLG="4">
+
+                <RadzenCard>
+
+                    <RadzenText TextStyle="TextStyle.H5"
+                                class="rz-mb-3">
+                        Financial Summary
+                    </RadzenText>
+
+
+                    <RadzenText TextStyle="TextStyle.Overline">
+                        TOTAL RENT RECEIVED
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.H4"
+                                class="rz-mb-3">
+                        @FormatCurrency(totalPaymentsReceived)
+                    </RadzenText>
+
+
+                    <RadzenText TextStyle="TextStyle.Overline">
+                        PAYMENT RECORDS
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.H5"
+                                class="rz-mb-3">
+                        @paymentCount
+                    </RadzenText>
+
+
+                    <RadzenText TextStyle="TextStyle.Overline">
+                        MAINTENANCE COST
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.H5">
+                        @FormatCurrency(totalMaintenanceCost)
+                    </RadzenText>
+
+                </RadzenCard>
+
+            </RadzenColumn>
+
+        </RadzenRow>
+
+
+        <!-- ========================================== -->
+        <!-- OWNERS                                     -->
+        <!-- ========================================== -->
+
+        <RadzenCard>
+
+            <RadzenText TextStyle="TextStyle.H5"
+                        class="rz-mb-3">
+                Property Owners
+            </RadzenText>
+
+
+            <RadzenLink Text="+ Assign Owner"
+                        Path="@($"/properties/{PropertyId}/owners/add")"
+                        class="rz-mb-3" />
+
+
+            @if (owners.Count == 0)
+            {
+                <RadzenText>
+                    No owner information found.
+                </RadzenText>
+            }
+            else
+            {
+                <RadzenDataGrid TItem="OwnerDisplayItem"
+                                Data="@owners"
+                                AllowPaging="false"
+                                AllowSorting="true"
+                                Style="width:100%;">
+
+                    <Columns>
+
+                        <RadzenDataGridColumn TItem="OwnerDisplayItem"
+                                              Property="OwnerName"
+                                              Title="Owner" />
+
+                        <RadzenDataGridColumn TItem="OwnerDisplayItem"
+                                              Property="Email"
+                                              Title="Email" />
+
+                        <RadzenDataGridColumn TItem="OwnerDisplayItem"
+                                              Property="Phone"
+                                              Title="Phone" />
+
+                        <RadzenDataGridColumn TItem="OwnerDisplayItem"
+                                              Property="Ownership"
+                                              Title="Ownership" />
+
+                        <RadzenDataGridColumn TItem="OwnerDisplayItem"
+                                              Title="Actions"
+                                              Filterable="false"
+                                              Sortable="false"
+                                              Width="190px">
+
+                            <Template Context="owner">
+
+                                <RadzenStack Orientation="Orientation.Horizontal"
+                                             Gap="0.75rem">
+
+                                    <RadzenLink Text="Edit"
+                                                Path="@($"/properties/{PropertyId}/owners/{owner.OwnerId}/edit")" />
+
+                                    <RadzenButton Text="Remove"
+                                                  ButtonStyle="ButtonStyle.Danger"
+                                                  Size="ButtonSize.Small"
+                                                  Click="@(_ => RemoveOwner(owner))" />
+
+                                </RadzenStack>
+
+                            </Template>
+
+                        </RadzenDataGridColumn>
+
+                    </Columns>
+
+                </RadzenDataGrid>
+            }
+
+        </RadzenCard>
+
+
+        <!-- ========================================== -->
+        <!-- LEASE HISTORY                              -->
+        <!-- ========================================== -->
+
+        <RadzenCard>
+
+            <RadzenText TextStyle="TextStyle.H5"
+                        class="rz-mb-3">
+                Lease History
+            </RadzenText>
+
+
+            @if (leases.Count == 0)
+            {
+                <RadzenText>
+                    No leases found for this property.
+                </RadzenText>
+            }
+            else
+            {
+                <RadzenDataGrid TItem="LeaseDisplayItem"
+                                Data="@leases"
+                                AllowPaging="true"
+                                PageSize="5"
+                                AllowSorting="true"
+                                Style="width:100%;">
+
+                    <Columns>
+
+                        <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                              Property="LeaseId"
+                                              Title="Lease ID" />
+
+                        <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                              Property="Tenant"
+                                              Title="Tenant" />
+
+                        <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                              Property="StartDate"
+                                              Title="Start Date" />
+
+                        <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                              Property="EndDate"
+                                              Title="End Date" />
+
+                        <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                              Property="MonthlyRent"
+                                              Title="Monthly Rent" />
+
+                        <RadzenDataGridColumn TItem="LeaseDisplayItem"
+                                              Property="Status"
+                                              Title="Status" />
+
+                    </Columns>
+
+                </RadzenDataGrid>
+            }
+
+        </RadzenCard>
+
+
+        <!-- ========================================== -->
+        <!-- MAINTENANCE HISTORY                        -->
+        <!-- ========================================== -->
+
+        <RadzenCard>
+
+            <RadzenText TextStyle="TextStyle.H5"
+                        class="rz-mb-3">
+                Maintenance History
+            </RadzenText>
+
+
+            @if (maintenanceItems.Count == 0)
+            {
+                <RadzenText>
+                    No maintenance requests found for this property.
+                </RadzenText>
+            }
+            else
+            {
+                <RadzenDataGrid TItem="MaintenanceDisplayItem"
+                                Data="@maintenanceItems"
+                                AllowPaging="true"
+                                PageSize="5"
+                                AllowSorting="true"
+                                AllowFiltering="true"
+                                Style="width:100%;">
+
+                    <Columns>
+
+                        <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                              Property="RequestId"
+                                              Title="Request ID" />
+
+                        <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                              Property="Description"
+                                              Title="Description" />
+
+                        <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                              Property="RequestDate"
+                                              Title="Request Date" />
+
+                        <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                              Property="CompletionDate"
+                                              Title="Completed" />
+
+                        <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                              Property="Status"
+                                              Title="Status" />
+
+                        <RadzenDataGridColumn TItem="MaintenanceDisplayItem"
+                                              Property="Cost"
+                                              Title="Cost" />
+
+                    </Columns>
+
+                </RadzenDataGrid>
+            }
+
+        </RadzenCard>
+
+    </RadzenStack>
+}
+
+
+@code
+{
+    // Property ID comes from:
+    // /properties/1
+    // /properties/2
+    // etc.
+
+    [Parameter]
+    public int PropertyId { get; set; }
+
+
+    private bool isLoading = true;
+
+    private string? loadErrorMessage;
+
+    private string? operationErrorMessage;
+
+    private string? actionMessage;
+
+    private Property? propertyRecord;
+
+
+    private List<OwnerDisplayItem> owners = new();
+
+    private List<LeaseDisplayItem> leases = new();
+
+    private List<MaintenanceDisplayItem> maintenanceItems = new();
+
+
+    private decimal totalPaymentsReceived;
+
+    private decimal totalMaintenanceCost;
+
+    private int paymentCount;
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadPropertyDetailsAsync();
+    }
+
+
+    private async Task LoadPropertyDetailsAsync()
+    {
+        isLoading = true;
+
+        loadErrorMessage = null;
+
+        operationErrorMessage = null;
+
+        actionMessage = null;
+
+        propertyRecord = null;
+
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // ==========================================
+            // PROPERTY
+            // ==========================================
+
+            propertyRecord =
+                await db.Properties
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(property =>
+                        property.PropertyId == PropertyId);
+
+
+            if (propertyRecord == null)
+            {
+                return;
+            }
+
+
+            // ==========================================
+            // OWNERS
+            // ==========================================
+
+            var ownershipRecords =
+                await db.Set<Propertyowner>()
+                    .AsNoTracking()
+                    .Where(record =>
+                        record.PropertyId == PropertyId)
+                    .ToListAsync();
+
+
+            var ownerRecords =
+                await db.Owners
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            owners =
+                ownershipRecords
+                    .Select(record =>
+                    {
+                        var owner =
+                            ownerRecords.FirstOrDefault(
+                                item =>
+                                    item.OwnerId ==
+                                    record.OwnerId);
+
+
+                        return new OwnerDisplayItem
+                        {
+                            OwnerId =
+                                record.OwnerId,
+
+                            OwnerName =
+                                owner != null
+                                    ? $"{owner.FirstName} {owner.LastName}"
+                                    : "Unknown Owner",
+
+                            Email =
+                                owner?.Email
+                                ?? "Not Recorded",
+
+                            Phone =
+                                owner?.Phone
+                                ?? "Not Recorded",
+
+                            Ownership =
+                                $"{record.OwnershipPercentage ?? 0m:0.##}%"
+                        };
+                    })
+                    .ToList();
+
+
+            // ==========================================
+            // LEASES
+            // ==========================================
+
+            var leaseRecords =
+                await db.Leases
+                    .AsNoTracking()
+                    .Where(lease =>
+                        lease.PropertyId == PropertyId)
+                    .ToListAsync();
+
+
+            var tenantRecords =
+                await db.Tenants
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            leases =
+                leaseRecords
+                    .Select(lease =>
+                    {
+                        var tenant =
+                            tenantRecords.FirstOrDefault(
+                                item =>
+                                    item.TenantId ==
+                                    lease.TenantId);
+
+
+                        return new LeaseDisplayItem
+                        {
+                            LeaseId =
+                                lease.LeaseId,
+
+                            Tenant =
+                                tenant != null
+                                    ? $"{tenant.FirstName} {tenant.LastName}"
+                                    : "Unknown Tenant",
+
+                            StartDate =
+                                FormatDate(
+                                    lease.StartDate),
+
+                            EndDate =
+                                FormatDate(
+                                    lease.EndDate),
+
+                            MonthlyRent =
+                                FormatCurrencyValue(
+                                    lease.MonthlyRent),
+
+                            Status =
+                                lease.LeaseStatus
+                                ?? "Unknown"
+                        };
+                    })
+                    .OrderByDescending(item =>
+                        item.LeaseId)
+                    .ToList();
+
+
+            // ==========================================
+            // PAYMENTS FOR THIS PROPERTY
+            // ==========================================
+
+            var leaseIds =
+                leaseRecords
+                    .Select(lease => lease.LeaseId)
+                    .ToHashSet();
+
+
+            var paymentRecords =
+                await db.Payments
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            var propertyPayments =
+                paymentRecords
+                    .Where(payment =>
+                        payment.LeaseId.HasValue &&
+                        leaseIds.Contains(
+                            payment.LeaseId.Value))
+                    .ToList();
+
+
+            paymentCount =
+                propertyPayments.Count;
+
+
+            totalPaymentsReceived =
+                propertyPayments.Sum(
+                    payment => payment.Amount);
+
+
+            // ==========================================
+            // MAINTENANCE
+            // ==========================================
+
+            var maintenanceRecords =
+                await db.Set<Maintenancerequest>()
+                    .AsNoTracking()
+                    .Where(request =>
+                        request.PropertyId == PropertyId)
+                    .ToListAsync();
+
+
+            totalMaintenanceCost =
+                maintenanceRecords.Sum(
+                    request =>
+                        request.Cost ?? 0m);
+
+
+            maintenanceItems =
+                maintenanceRecords
+                    .Select(request =>
+                        new MaintenanceDisplayItem
+                        {
+                            RequestId =
+                                request.RequestId,
+
+                            Description =
+                                request.Description,
+
+                            RequestDate =
+                                request.RequestDate.HasValue
+                                    ? request.RequestDate.Value
+                                        .ToString("dd MMM yyyy")
+                                    : "No Date",
+
+                            CompletionDate =
+                                request.CompletionDate.HasValue
+                                    ? request.CompletionDate.Value
+                                        .ToString("dd MMM yyyy")
+                                    : "Not Completed",
+
+                            Status =
+                                request.Status
+                                ?? "Unknown",
+
+                            Cost =
+                                request.Cost.HasValue
+                                    ? FormatCurrency(
+                                        request.Cost.Value)
+                                    : "Not Recorded"
+                        })
+                    .OrderByDescending(item =>
+                        item.RequestId)
+                    .ToList();
+        }
+        catch (Exception ex)
+        {
+            loadErrorMessage =
+                "The property details could not be loaded. Please try again.";
+
+            Console.WriteLine(
+                $"Error loading property details for Property #{PropertyId}: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    // ==============================================
+    // REMOVE OWNER ASSIGNMENT
+    // ==============================================
+
+    private async Task RemoveOwner(OwnerDisplayItem owner)
+    {
+        actionMessage = null;
+        operationErrorMessage = null;
+
+        try
+        {
+            var confirmed =
+                await JS.InvokeAsync<bool>(
+                    "confirm",
+                    $"Remove {owner.OwnerName} from this property?");
+
+
+            if (!confirmed)
+            {
+                return;
+            }
+
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            var assignment =
+                await db.Set<Propertyowner>()
+                    .FirstOrDefaultAsync(
+                        record =>
+                            record.PropertyId == PropertyId &&
+                            record.OwnerId == owner.OwnerId);
+
+
+            if (assignment == null)
+            {
+                actionMessage =
+                    "The ownership assignment could not be found.";
+
+                return;
+            }
+
+
+            db.Set<Propertyowner>()
+                .Remove(assignment);
+
+
+            await db.SaveChangesAsync();
+
+
+            // Remove only from the visible property owner list.
+            // The actual Owner record remains in the Owner table.
+            owners.Remove(owner);
+
+
+            actionMessage =
+                $"{owner.OwnerName} was removed from this property.";
+        }
+        catch (Exception ex)
+        {
+            operationErrorMessage =
+                "The owner assignment could not be removed. Please try again.";
+
+            Console.WriteLine(
+                $"Error removing Owner #{owner.OwnerId} from Property #{PropertyId}: {ex}");
+        }
+    }
+
+
+    // ==============================================
+    // FORMATTING
+    // ==============================================
+
+    private static string FormatCurrency(decimal amount)
+    {
+        return amount.ToString(
+            "C",
+            CultureInfo.GetCultureInfo("en-GB"));
+    }
+
+
+    private static string FormatCurrencyValue(object? amount)
+    {
+        if (amount == null)
+        {
+            return "Not Recorded";
+        }
+
+        return string.Format(
+            CultureInfo.GetCultureInfo("en-GB"),
+            "{0:C}",
+            amount);
+    }
+
+
+    private static string FormatDate(object? date)
+    {
+        if (date == null)
+        {
+            return "No Date";
+        }
+
+        return string.Format(
+            CultureInfo.GetCultureInfo("en-GB"),
+            "{0:dd MMM yyyy}",
+            date);
+    }
+
+
+    // ==============================================
+    // DISPLAY MODELS
+    // ==============================================
+
+    private sealed class OwnerDisplayItem
+    {
+        public int OwnerId { get; set; }
+
+        public string OwnerName { get; set; } = "";
+
+        public string Email { get; set; } = "";
+
+        public string Phone { get; set; } = "";
+
+        public string Ownership { get; set; } = "";
+    }
+
+
+    private sealed class LeaseDisplayItem
+    {
+        public int LeaseId { get; set; }
+
+        public string Tenant { get; set; } = "";
+
+        public string StartDate { get; set; } = "";
+
+        public string EndDate { get; set; } = "";
+
+        public string MonthlyRent { get; set; } = "";
+
+        public string Status { get; set; } = "";
+    }
+
+
+    private sealed class MaintenanceDisplayItem
+    {
+        public int RequestId { get; set; }
+
+        public string Description { get; set; } = "";
+
+        public string RequestDate { get; set; } = "";
+
+        public string CompletionDate { get; set; } = "";
+
+        public string Status { get; set; } = "";
+
+        public string Cost { get; set; } = "";
+    }
+}

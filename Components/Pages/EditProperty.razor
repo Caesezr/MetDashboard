@@ -1,0 +1,509 @@
+﻿@page "/properties/edit/{PropertyId:int}"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using MetDashboard.Data.Models
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Edit Property</PageTitle>
+
+<RadzenStack Gap="1.5rem"
+             class="form-page">
+
+
+    <!-- =====================================================
+         BACK LINK
+         ===================================================== -->
+
+    <div>
+
+        <RadzenLink Text="Back to Property"
+                    Icon="arrow_back"
+                    Path="@($"/properties/{PropertyId}")"
+                    class="form-back-link" />
+
+    </div>
+
+
+    <!-- =====================================================
+         PAGE HEADER
+         ===================================================== -->
+
+    <div>
+
+        <div class="management-page-eyebrow">
+            PROPERTY MANAGEMENT
+        </div>
+
+        <RadzenText TextStyle="TextStyle.H3"
+                    Style="margin:0;">
+            Edit Property
+        </RadzenText>
+
+        <RadzenText TextStyle="TextStyle.Body1"
+                    Style="margin-top:0.35rem;">
+            Update the selected property's details.
+        </RadzenText>
+
+    </div>
+
+
+    <!-- =====================================================
+         LOADING / ERROR
+         ===================================================== -->
+    @if (isLoading)
+    {
+        <RadzenCard class="form-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                           Size="ProgressBarCircularSize.Small" />
+
+                <RadzenText>
+                    Loading property...
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (!string.IsNullOrEmpty(loadErrorMessage))
+    {
+        <RadzenCard class="form-error-card">
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         AlignItems="AlignItems.Center"
+                         Gap="0.75rem">
+
+                <RadzenIcon Icon="error"
+                            Style="font-size:1.25rem;" />
+
+                <RadzenText>
+                    @loadErrorMessage
+                </RadzenText>
+
+            </RadzenStack>
+
+        </RadzenCard>
+    }
+    else if (model != null)
+    {
+
+        @if (!string.IsNullOrEmpty(saveErrorMessage))
+        {
+            <RadzenCard class="form-error-card">
+
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             Gap="0.75rem">
+
+                    <RadzenIcon Icon="error"
+                                Style="font-size:1.25rem;" />
+
+                    <RadzenText>
+                        @saveErrorMessage
+                    </RadzenText>
+
+                </RadzenStack>
+
+            </RadzenCard>
+        }
+
+
+        <!-- =================================================
+             FORM
+             ================================================= -->
+
+        <RadzenCard class="form-card">
+
+            <div class="form-card-header">
+
+                <div>
+
+                    <RadzenText TextStyle="TextStyle.H6"
+                                Style="margin:0;">
+                        Property Details
+                    </RadzenText>
+
+                    <div class="form-card-description">
+                        Update the address, location and purchasing information for this property.
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="form-card-body">
+
+                <RadzenTemplateForm TItem="EditPropertyModel"
+                                    Data="@model"
+                                    Submit="@SaveProperty">
+
+                    <RadzenStack Gap="1.5rem">
+
+
+                        <!-- =====================================
+                             ADDRESS
+                             ===================================== -->
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Address
+                                <span class="form-required">*</span>
+                            </label>
+
+                            <RadzenTextBox Name="Address"
+                                           @bind-Value="@model.Address"
+                                           Placeholder="e.g. 25 High Street"
+                                           Style="width:100%;" />
+
+                            <RadzenRequiredValidator Component="Address"
+                                                     Text="Address is required." />
+
+                        </div>
+
+
+                        <!-- =====================================
+                             CITY / STATE
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    City
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenTextBox Name="City"
+                                               @bind-Value="@model.City"
+                                               Placeholder="e.g. London"
+                                               Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="City"
+                                                         Text="City is required." />
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    State / Region
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenTextBox Name="State"
+                                               @bind-Value="@model.State"
+                                               Placeholder="e.g. Greater London"
+                                               Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="State"
+                                                         Text="State or region is required." />
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             POSTCODE / PROPERTY TYPE
+                             ===================================== -->
+
+                        <div class="form-grid">
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    ZIP / Postcode
+                                    <span class="form-required">*</span>
+                                </label>
+
+                                <RadzenTextBox Name="ZipCode"
+                                               @bind-Value="@model.ZipCode"
+                                               Placeholder="e.g. TW13 4AB"
+                                               Style="width:100%;" />
+
+                                <RadzenRequiredValidator Component="ZipCode"
+                                                         Text="ZIP code or postcode is required." />
+
+                            </div>
+
+
+                            <div class="form-field">
+
+                                <label class="form-label">
+                                    Property Type
+                                </label>
+
+                                <RadzenDropDown TValue="string"
+                                                Data="@propertyTypes"
+                                                @bind-Value="@model.PropertyType"
+                                                Placeholder="Select property type"
+                                                Style="width:100%;" />
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             PURCHASE PRICE
+                             ===================================== -->
+
+                        <div class="form-field">
+
+                            <label class="form-label">
+                                Purchase Price
+                            </label>
+
+                            <RadzenNumeric TValue="decimal?"
+                                           @bind-Value="@model.PurchasePrice"
+                                           Placeholder="Enter purchase price"
+                                           Style="width:100%;" />
+
+                            <div class="form-field-hint">
+                                Update the property's recorded purchase price if required.
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             FORM ACTIONS
+                             ===================================== -->
+
+                        <div class="form-actions">
+
+                            <RadzenButton Text="Cancel"
+                                          Icon="close"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Click="@Cancel" />
+
+                            <RadzenButton Text="Save Changes"
+                                          Icon="save"
+                                          ButtonType="ButtonType.Submit"
+                                          Disabled="@isSaving" />
+
+                        </div>
+
+
+                        @if (isSaving)
+                        {
+                            <div class="form-saving-message">
+
+                                <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                                           Size="ProgressBarCircularSize.Small" />
+
+                                <RadzenText>
+                                    Saving changes...
+                                </RadzenText>
+
+                            </div>
+                        }
+
+                    </RadzenStack>
+
+                </RadzenTemplateForm>
+
+            </div>
+
+        </RadzenCard>
+    }
+
+</RadzenStack>
+
+
+@code
+{
+    [Parameter]
+    public int PropertyId { get; set; }
+
+    private EditPropertyModel? model;
+
+    private bool isLoading = true;
+
+    private bool isSaving;
+
+    private string? loadErrorMessage;
+
+    private string? saveErrorMessage;
+
+
+    private readonly List<string> propertyTypes =
+    [
+        "Single Family",
+        "Apartment",
+        "Commercial",
+        "Condo"
+    ];
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        loadErrorMessage = null;
+
+        saveErrorMessage = null;
+
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            var property =
+                await db.Properties
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(item =>
+                        item.PropertyId == PropertyId);
+
+
+            if (property == null)
+            {
+                loadErrorMessage =
+                    "The requested property could not be found.";
+
+                return;
+            }
+
+
+            model =
+                new EditPropertyModel
+                {
+                    Address =
+                        property.Address,
+
+                    City =
+                        property.City,
+
+                    State =
+                        property.State,
+
+                    ZipCode =
+                        property.ZipCode,
+
+                    PropertyType =
+                        property.PropertyType,
+
+                    PurchasePrice =
+                        property.PurchasePrice
+                };
+        }
+        catch (Exception ex)
+        {
+            loadErrorMessage =
+                "The selected property could not be loaded. Please return to the property page and try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    private async Task SaveProperty(
+        EditPropertyModel value)
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+
+            saveErrorMessage = null;
+
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            var property =
+                await db.Properties
+                    .FirstOrDefaultAsync(item =>
+                        item.PropertyId == PropertyId);
+
+
+            if (property == null)
+            {
+                saveErrorMessage =
+                    "The property could not be found.";
+
+                return;
+            }
+
+
+            property.Address =
+                value.Address.Trim();
+
+            property.City =
+                value.City.Trim();
+
+            property.State =
+                value.State.Trim();
+
+            property.ZipCode =
+                value.ZipCode.Trim();
+
+            property.PropertyType =
+                value.PropertyType;
+
+            property.PurchasePrice =
+                value.PurchasePrice;
+
+
+            await db.SaveChangesAsync();
+
+
+            Navigation.NavigateTo(
+                $"/properties/{PropertyId}");
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage =
+                "The property changes could not be saved. Please try again.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo(
+            $"/properties/{PropertyId}");
+    }
+
+
+    private sealed class EditPropertyModel
+    {
+        public string Address { get; set; } = "";
+
+        public string City { get; set; } = "";
+
+        public string State { get; set; } = "";
+
+        public string ZipCode { get; set; } = "";
+
+        public string? PropertyType { get; set; }
+
+        public decimal? PurchasePrice { get; set; }
+    }
+}

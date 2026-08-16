@@ -1,0 +1,1704 @@
+﻿@page "/"
+
+@using Microsoft.EntityFrameworkCore
+@using MetDashboard.Data
+@using System.Globalization
+@using MetDashboard.Data.Models
+
+@inject IDbContextFactory<RealEstateDbContext> DbFactory
+
+<PageTitle>Real Estate Dashboard</PageTitle>
+
+
+@if (isLoading)
+{
+    <RadzenCard class="dashboard-state-card rz-mb-4">
+
+        <div class="dashboard-loading-state">
+
+            <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
+                                       Size="ProgressBarCircularSize.Small" />
+
+            <div>
+
+                <div class="dashboard-state-title">
+                    Loading dashboard
+                </div>
+
+                <div class="dashboard-state-description">
+                    Retrieving portfolio information...
+                </div>
+
+            </div>
+
+        </div>
+
+    </RadzenCard>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <RadzenCard class="dashboard-state-card dashboard-error-card rz-mb-4">
+
+        <div class="dashboard-error-state">
+
+            <RadzenIcon Icon="error"
+                        Style="font-size:1.5rem;" />
+
+            <div>
+
+                <div class="dashboard-state-title">
+                    Unable to load dashboard
+                </div>
+
+                <div class="dashboard-state-description">
+                    @errorMessage
+                </div>
+
+            </div>
+
+        </div>
+
+    </RadzenCard>
+}
+else
+{
+    <!-- ================================================= -->
+    <!-- DASHBOARD HEADER                                  -->
+    <!-- ================================================= -->
+
+    <div class="dashboard-page-header rz-mb-4">
+
+        <div>
+
+            <div class="management-page-eyebrow">
+                PORTFOLIO OVERVIEW
+            </div>
+
+            <RadzenText TextStyle="TextStyle.H3"
+                        Style="margin:0;">
+                Real Estate Dashboard
+            </RadzenText>
+
+            <RadzenText TextStyle="TextStyle.Body1"
+                        Style="margin-top:0.35rem;">
+                Monitor portfolio performance, tenancy, revenue and maintenance activity.
+            </RadzenText>
+
+        </div>
+
+
+        <div class="dashboard-date-card">
+
+            <RadzenIcon Icon="calendar_today"
+                        Style="font-size:1.1rem;" />
+
+            <div>
+
+                <div class="dashboard-date-label">
+                    TODAY
+                </div>
+
+                <div class="dashboard-date-value">
+                    @DateTime.Now.ToString("dd MMMM yyyy")
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- TOP KPI CARDS                                     -->
+    <!-- ================================================= -->
+
+    <RadzenRow Gap="1rem"
+               class="rz-mb-5">
+
+
+        <!-- TOTAL REVENUE -->
+
+        <RadzenColumn Size="12"
+                      SizeSM="6"
+                      SizeLG="3">
+
+            <RadzenCard class="rz-background-color-success-dark dashboard-kpi-card">
+
+                <div class="dashboard-kpi-content">
+
+                    <div class="dashboard-kpi-text">
+
+                        <RadzenText class="rz-color-white"
+                                    TextStyle="TextStyle.Overline">
+                            TOTAL REVENUE
+                        </RadzenText>
+
+                        <RadzenText class="rz-color-white dashboard-kpi-value"
+                                    TextStyle="TextStyle.H3">
+                            @FormatUsd(totalRevenue)
+                        </RadzenText>
+
+                        <RadzenText class="rz-color-white"
+                                    TextStyle="TextStyle.Body2">
+                            All recorded payments
+                        </RadzenText>
+
+                        <a href="/payments"
+                           class="dashboard-kpi-link dashboard-kpi-link-light">
+
+                            View payments
+
+                            <RadzenIcon Icon="arrow_forward" />
+
+                        </a>
+
+                    </div>
+
+
+                    <div class="dashboard-kpi-icon dashboard-kpi-icon-light">
+
+                        <RadzenIcon Icon="payments"
+                                    Style="font-size:1.5rem;" />
+
+                    </div>
+
+                </div>
+
+            </RadzenCard>
+
+        </RadzenColumn>
+
+
+        <!-- TOTAL PROPERTIES -->
+
+        <RadzenColumn Size="12"
+                      SizeSM="6"
+                      SizeLG="3">
+
+            <RadzenCard class="rz-background-color-warning dashboard-kpi-card">
+
+                <div class="dashboard-kpi-content">
+
+                    <div class="dashboard-kpi-text">
+
+                        <RadzenText class="rz-color-white"
+                                    TextStyle="TextStyle.Overline">
+                            TOTAL PROPERTIES
+                        </RadzenText>
+
+                        <RadzenText class="rz-color-white dashboard-kpi-value"
+                                    TextStyle="TextStyle.H3">
+                            @totalProperties
+                        </RadzenText>
+
+                        <RadzenText class="rz-color-white"
+                                    TextStyle="TextStyle.Body2">
+                            Properties managed
+                        </RadzenText>
+
+                        <a href="/properties"
+                           class="dashboard-kpi-link dashboard-kpi-link-light">
+
+                            View properties
+
+                            <RadzenIcon Icon="arrow_forward" />
+
+                        </a>
+
+                    </div>
+
+
+                    <div class="dashboard-kpi-icon dashboard-kpi-icon-light">
+
+                        <RadzenIcon Icon="home"
+                                    Style="font-size:1.5rem;" />
+
+                    </div>
+
+                </div>
+
+            </RadzenCard>
+
+        </RadzenColumn>
+
+
+        <!-- TOTAL TENANTS -->
+
+        <RadzenColumn Size="12"
+                      SizeSM="6"
+                      SizeLG="3">
+
+            <RadzenCard class="rz-background-color-info-dark dashboard-kpi-card">
+
+                <div class="dashboard-kpi-content">
+
+                    <div class="dashboard-kpi-text">
+
+                        <RadzenText class="rz-color-white"
+                                    TextStyle="TextStyle.Overline">
+                            TOTAL TENANTS
+                        </RadzenText>
+
+                        <RadzenText class="rz-color-white dashboard-kpi-value"
+                                    TextStyle="TextStyle.H3">
+                            @totalTenants
+                        </RadzenText>
+
+                        <RadzenText class="rz-color-white"
+                                    TextStyle="TextStyle.Body2">
+                            Registered tenants
+                        </RadzenText>
+
+                        <a href="/tenants"
+                           class="dashboard-kpi-link dashboard-kpi-link-light">
+
+                            View tenants
+
+                            <RadzenIcon Icon="arrow_forward" />
+
+                        </a>
+
+                    </div>
+
+
+                    <div class="dashboard-kpi-icon dashboard-kpi-icon-light">
+
+                        <RadzenIcon Icon="people"
+                                    Style="font-size:1.5rem;" />
+
+                    </div>
+
+                </div>
+
+            </RadzenCard>
+
+        </RadzenColumn>
+
+
+        <!-- ACTIVE LEASES -->
+
+        <RadzenColumn Size="12"
+                      SizeSM="6"
+                      SizeLG="3">
+
+            <RadzenCard class="dashboard-kpi-card">
+
+                <div class="dashboard-kpi-content">
+
+                    <div class="dashboard-kpi-text">
+
+                        <RadzenText TextStyle="TextStyle.Overline">
+                            ACTIVE LEASES
+                        </RadzenText>
+
+                        <RadzenText class="dashboard-kpi-value"
+                                    TextStyle="TextStyle.H3">
+                            @activeLeases
+                        </RadzenText>
+
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            Current lease records
+                        </RadzenText>
+
+                        <a href="/leases"
+                           class="dashboard-kpi-link dashboard-kpi-link-dark">
+
+                            View leases
+
+                            <RadzenIcon Icon="arrow_forward" />
+
+                        </a>
+
+                    </div>
+
+
+                    <div class="dashboard-kpi-icon dashboard-kpi-icon-dark">
+
+                        <RadzenIcon Icon="description"
+                                    Style="font-size:1.5rem;" />
+
+                    </div>
+
+                </div>
+
+            </RadzenCard>
+
+        </RadzenColumn>
+
+    </RadzenRow>
+
+
+    <!-- ================================================= -->
+    <!-- FINANCIAL CHARTS                                  -->
+    <!-- ================================================= -->
+
+    <RadzenRow Gap="1rem"
+               class="rz-mb-5">
+
+
+        <!-- MONTHLY REVENUE -->
+
+        <RadzenColumn Size="12"
+                      SizeLG="7">
+
+            <RadzenCard class="dashboard-chart-card dashboard-content-card">
+
+                <RadzenText TextStyle="TextStyle.H5">
+                    Monthly Revenue - @revenueYear
+                </RadzenText>
+
+                <RadzenText TextStyle="TextStyle.Body2"
+                            class="rz-mb-3">
+                    Rental payments received by month
+                </RadzenText>
+
+                <a href="/payments"
+                   class="dashboard-section-link rz-mb-3">
+
+                    View payment records
+
+                    <RadzenIcon Icon="arrow_forward" />
+
+                </a>
+
+
+                @if (hasPaymentData)
+                {
+                    <RadzenChart class="dashboard-chart">
+
+                        <RadzenColumnSeries Data="@monthlyRevenue"
+                                            CategoryProperty="Month"
+                                            ValueProperty="Amount"
+                                            Title="Revenue" />
+
+                        <RadzenCategoryAxis />
+
+                        <RadzenValueAxis Formatter="@(value => FormatChartCurrency(value))">
+
+                            <RadzenGridLines Visible="true" />
+
+                        </RadzenValueAxis>
+
+                        <RadzenLegend Position="LegendPosition.Bottom" />
+
+                    </RadzenChart>
+                }
+                else
+                {
+                    <div class="dashboard-empty-state">
+
+                        <RadzenIcon Icon="bar_chart" />
+
+                        <div class="dashboard-empty-title">
+                            No payment data available
+                        </div>
+
+                        <div class="dashboard-empty-description">
+                            Revenue information will appear here once payment records have been added.
+                        </div>
+
+                    </div>
+                }
+
+            </RadzenCard>
+
+        </RadzenColumn>
+
+
+        <!-- MONTHLY MAINTENANCE COST -->
+
+        <RadzenColumn Size="12"
+                      SizeLG="5">
+
+            <RadzenCard class="dashboard-chart-card dashboard-content-card">
+
+                <RadzenText TextStyle="TextStyle.H5">
+                    Maintenance Expenditure - @maintenanceYear
+                </RadzenText>
+
+                <RadzenText TextStyle="TextStyle.Body2"
+                            class="rz-mb-3">
+                    Property maintenance costs by month
+                </RadzenText>
+
+                <a href="/maintenance"
+                   class="dashboard-section-link rz-mb-3">
+
+                    View maintenance
+
+                    <RadzenIcon Icon="arrow_forward" />
+
+                </a>
+
+
+                @if (hasMaintenanceExpenditureData)
+                {
+                    <RadzenChart class="dashboard-chart">
+
+                        <RadzenColumnSeries Data="@monthlyMaintenance"
+                                            CategoryProperty="Month"
+                                            ValueProperty="Amount"
+                                            Title="Maintenance Cost" />
+
+                        <RadzenCategoryAxis />
+
+                        <RadzenValueAxis Formatter="@(value => FormatChartCurrency(value))">
+
+                            <RadzenGridLines Visible="true" />
+
+                        </RadzenValueAxis>
+
+                        <RadzenLegend Position="LegendPosition.Bottom" />
+
+                    </RadzenChart>
+                }
+                else
+                {
+                    <div class="dashboard-empty-state">
+
+                        <RadzenIcon Icon="construction" />
+
+                        <div class="dashboard-empty-title">
+                            No maintenance expenditure data available
+                        </div>
+
+                        <div class="dashboard-empty-description">
+                            Maintenance expenditure will appear here once dated maintenance records are available.
+                        </div>
+
+                    </div>
+                }
+
+            </RadzenCard>
+
+        </RadzenColumn>
+
+    </RadzenRow>
+
+
+    <!-- ================================================= -->
+    <!-- PROPERTY BREAKDOWN + MAINTENANCE STATUS           -->
+    <!-- ================================================= -->
+
+    <RadzenRow Gap="1rem"
+               class="rz-mb-5">
+
+
+        <!-- PROPERTY BREAKDOWN -->
+
+        <RadzenColumn Size="12"
+                      SizeLG="6">
+
+            <RadzenCard class="dashboard-chart-card dashboard-content-card">
+
+                <RadzenText TextStyle="TextStyle.H5">
+                    Property Breakdown
+                </RadzenText>
+
+                <RadzenText TextStyle="TextStyle.Body2">
+                    Portfolio by property type
+                </RadzenText>
+
+
+                @if (propertyBreakdown.Count > 0)
+                {
+                    <RadzenChart class="dashboard-chart">
+
+                        <RadzenDonutSeries Data="@propertyBreakdown"
+                                           CategoryProperty="Category"
+                                           ValueProperty="Count">
+
+                            <RadzenSeriesDataLabels Visible="true" />
+
+                        </RadzenDonutSeries>
+
+                        <RadzenLegend Position="LegendPosition.Bottom" />
+
+                    </RadzenChart>
+                }
+                else
+                {
+                    <div class="dashboard-empty-state">
+
+                        <RadzenIcon Icon="home_work" />
+
+                        <div class="dashboard-empty-title">
+                            No property data available
+                        </div>
+
+                        <div class="dashboard-empty-description">
+                            Property type information will appear here once properties have been added.
+                        </div>
+
+                    </div>
+                }
+
+            </RadzenCard>
+
+        </RadzenColumn>
+
+
+        <!-- MAINTENANCE STATUS -->
+
+        <RadzenColumn Size="12"
+                      SizeLG="6">
+
+            <RadzenCard class="dashboard-chart-card dashboard-content-card">
+
+                <RadzenText TextStyle="TextStyle.H5">
+                    Maintenance Requests
+                </RadzenText>
+
+                <RadzenText TextStyle="TextStyle.Body2">
+                    Current request status breakdown
+                </RadzenText>
+
+
+                @if (maintenanceBreakdown.Count > 0)
+                {
+                    <RadzenChart class="dashboard-chart">
+
+                        <RadzenPieSeries Data="@maintenanceBreakdown"
+                                         CategoryProperty="Category"
+                                         ValueProperty="Count">
+
+                            <RadzenSeriesDataLabels Visible="true" />
+
+                        </RadzenPieSeries>
+
+                        <RadzenLegend Position="LegendPosition.Bottom" />
+
+                    </RadzenChart>
+                }
+                else
+                {
+                    <div class="dashboard-empty-state">
+
+                        <RadzenIcon Icon="build" />
+
+                        <div class="dashboard-empty-title">
+                            No maintenance requests available
+                        </div>
+
+                        <div class="dashboard-empty-description">
+                            Maintenance request statistics will appear here once requests have been created.
+                        </div>
+
+                    </div>
+                }
+
+            </RadzenCard>
+
+        </RadzenColumn>
+
+    </RadzenRow>
+
+
+    <!-- ================================================= -->
+    <!-- TOP 10 PROPERTIES                                 -->
+    <!-- ================================================= -->
+
+    <RadzenRow class="rz-mb-5">
+
+        <RadzenColumn Size="12">
+
+            <RadzenCard class="dashboard-content-card">
+
+                <RadzenText TextStyle="TextStyle.H5">
+                    Top 10 Properties
+                </RadzenText>
+
+                <RadzenText TextStyle="TextStyle.Body2"
+                            class="rz-mb-3">
+                    Highest valued properties in the portfolio
+                </RadzenText>
+
+
+                <div class="dashboard-section-action">
+
+                    <a href="/properties"
+                       class="dashboard-section-link">
+
+                        View all properties
+
+                        <RadzenIcon Icon="arrow_forward" />
+
+                    </a>
+
+                </div>
+
+
+                @if (topProperties.Count > 0)
+                {
+                    <!-- RESPONSIVE TABLE CONTAINER -->
+
+                    <div class="dashboard-table-scroll">
+
+                        <RadzenDataGrid TItem="TopPropertyItem"
+                                        Data="@topProperties"
+                                        AllowSorting="true"
+                                        AllowPaging="false"
+                                        AllowFiltering="false"
+                                        class="dashboard-table">
+
+                            <Columns>
+
+                                <RadzenDataGridColumn TItem="TopPropertyItem"
+                                                      Property="Address"
+                                                      Title="Property" />
+
+                                <RadzenDataGridColumn TItem="TopPropertyItem"
+                                                      Property="Location"
+                                                      Title="Location" />
+
+                                <RadzenDataGridColumn TItem="TopPropertyItem"
+                                                      Property="PropertyType"
+                                                      Title="Type" />
+
+                                <RadzenDataGridColumn TItem="TopPropertyItem"
+                                                      Property="PurchasePriceText"
+                                                      Title="Purchase Value"
+                                                      TextAlign="TextAlign.Right" />
+
+                            </Columns>
+
+                        </RadzenDataGrid>
+
+                    </div>
+                }
+                else
+                {
+                    <div class="dashboard-empty-state dashboard-empty-table">
+
+                        <RadzenIcon Icon="apartment" />
+
+                        <div class="dashboard-empty-title">
+                            No properties available to display
+                        </div>
+
+                        <div class="dashboard-empty-description">
+                            Property rankings will appear here once property records have been added.
+                        </div>
+
+                    </div>
+                }
+
+            </RadzenCard>
+
+        </RadzenColumn>
+
+    </RadzenRow>
+
+
+    <!-- ================================================= -->
+    <!-- TOP OWNERS / CLIENTS                              -->
+    <!-- ================================================= -->
+
+    <RadzenRow>
+
+        <RadzenColumn Size="12">
+
+            <RadzenCard class="dashboard-content-card">
+
+                <RadzenText TextStyle="TextStyle.H5">
+                    Top 10 Property Owners
+                </RadzenText>
+
+                <RadzenText TextStyle="TextStyle.Body2"
+                            class="rz-mb-3">
+                    Clients ranked by estimated portfolio value
+                </RadzenText>
+
+
+                <div class="dashboard-section-action">
+
+                    <a href="/owners"
+                       class="dashboard-section-link">
+
+                        View all owners
+
+                        <RadzenIcon Icon="arrow_forward" />
+
+                    </a>
+
+                </div>
+
+
+                @if (topOwners.Count > 0)
+                {
+                    <!-- RESPONSIVE TABLE CONTAINER -->
+
+                    <div class="dashboard-table-scroll">
+
+                        <RadzenDataGrid TItem="OwnerPortfolioItem"
+                                        Data="@topOwners"
+                                        AllowSorting="true"
+                                        AllowPaging="false"
+                                        AllowFiltering="false"
+                                        class="dashboard-table">
+
+                            <Columns>
+
+                                <RadzenDataGridColumn TItem="OwnerPortfolioItem"
+                                                      Property="OwnerName"
+                                                      Title="Owner" />
+
+                                <RadzenDataGridColumn TItem="OwnerPortfolioItem"
+                                                      Property="PropertyCount"
+                                                      Title="Properties" />
+
+                                <RadzenDataGridColumn TItem="OwnerPortfolioItem"
+                                                      Property="PortfolioValueText"
+                                                      Title="Portfolio Value"
+                                                      TextAlign="TextAlign.Right" />
+
+                            </Columns>
+
+                        </RadzenDataGrid>
+
+                    </div>
+                }
+                else
+                {
+                    <div class="dashboard-empty-state dashboard-empty-table">
+
+                        <RadzenIcon Icon="person" />
+
+                        <div class="dashboard-empty-title">
+                            No property owners available to display
+                        </div>
+
+                        <div class="dashboard-empty-description">
+                            Owner portfolio information will appear here once owner records have been added.
+                        </div>
+
+                    </div>
+                }
+
+            </RadzenCard>
+
+        </RadzenColumn>
+
+    </RadzenRow>
+}
+
+
+@code
+{
+    // =====================================================
+    // DASHBOARD VALUES
+    // =====================================================
+
+    private bool isLoading = true;
+
+    private string? errorMessage;
+
+    private int totalProperties;
+
+    private int totalTenants;
+
+    private int activeLeases;
+
+    private decimal totalRevenue;
+
+    private int revenueYear;
+
+    private int maintenanceYear;
+
+
+    // =====================================================
+    // DATA AVAILABILITY
+    // =====================================================
+
+    private bool hasPaymentData;
+
+    private bool hasMaintenanceExpenditureData;
+
+
+    // =====================================================
+    // CHART DATA
+    // =====================================================
+
+    private List<MonthlyAmountItem> monthlyRevenue = new();
+
+    private List<MonthlyAmountItem> monthlyMaintenance = new();
+
+    private List<CategoryCountItem> propertyBreakdown = new();
+
+    private List<CategoryCountItem> maintenanceBreakdown = new();
+
+
+    // =====================================================
+    // TABLE DATA
+    // =====================================================
+
+    private List<TopPropertyItem> topProperties = new();
+
+    private List<OwnerPortfolioItem> topOwners = new();
+
+
+    // =====================================================
+    // LOAD DASHBOARD
+    // =====================================================
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+
+            // -------------------------------------------------
+            // TOP DASHBOARD CARDS
+            // -------------------------------------------------
+
+            totalProperties =
+                await db.Properties.CountAsync();
+
+            totalTenants =
+                await db.Tenants.CountAsync();
+
+            activeLeases =
+                await db.Leases.CountAsync(
+                    lease => lease.LeaseStatus == "Active");
+
+
+            // -------------------------------------------------
+            // LOAD PAYMENTS
+            // -------------------------------------------------
+
+            var payments =
+                await db.Payments
+                    .AsNoTracking()
+                    .ToListAsync();
+
+            totalRevenue =
+                payments.Sum(
+                    payment => payment.Amount);
+
+
+            hasPaymentData =
+                payments.Count > 0;
+
+
+            // Use latest year available in sample data.
+            // This prevents the chart being empty if the
+            // database does not contain payments for this year.
+
+            if (hasPaymentData)
+            {
+                revenueYear =
+                    payments.Max(
+                        payment =>
+                            payment.PaymentDate.Year);
+
+
+                var revenueByMonth =
+                    payments
+                        .Where(
+                            payment =>
+                                payment.PaymentDate.Year ==
+                                revenueYear)
+                        .GroupBy(
+                            payment =>
+                                payment.PaymentDate.Month)
+                        .ToDictionary(
+                            group =>
+                                group.Key,
+                            group =>
+                                group.Sum(
+                                    payment =>
+                                        payment.Amount));
+
+
+                monthlyRevenue =
+                    Enumerable.Range(1, 12)
+                        .Select(
+                            month =>
+                                new MonthlyAmountItem
+                                {
+                                    Month =
+                                        new DateTime(
+                                            2000,
+                                            month,
+                                            1)
+                                        .ToString("MMM"),
+
+                                    Amount =
+                                        revenueByMonth
+                                            .GetValueOrDefault(
+                                                month,
+                                                0)
+                                })
+                        .ToList();
+            }
+            else
+            {
+                revenueYear =
+                    DateTime.Now.Year;
+            }
+
+
+            // -------------------------------------------------
+            // LOAD MAINTENANCE REQUESTS
+            // -------------------------------------------------
+
+            var maintenanceRequests =
+                await db.Set<MetDashboard.Data.Models.Maintenancerequest>()
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // Maintenance status pie chart
+
+            maintenanceBreakdown =
+                maintenanceRequests
+                    .GroupBy(
+                        request =>
+                            request.Status ??
+                            "Unknown")
+                    .Select(
+                        group =>
+                            new CategoryCountItem
+                            {
+                                Category =
+                                    group.Key,
+
+                                Count =
+                                    group.Count()
+                            })
+                    .OrderByDescending(
+                        item =>
+                            item.Count)
+                    .ToList();
+
+
+            // Monthly maintenance expenditure
+
+            // Only use maintenance requests that have a request date
+
+            var datedMaintenanceRequests =
+                maintenanceRequests
+                    .Where(
+                        request =>
+                            request.RequestDate.HasValue)
+                    .ToList();
+
+
+            hasMaintenanceExpenditureData =
+                datedMaintenanceRequests.Count > 0;
+
+
+            if (hasMaintenanceExpenditureData)
+            {
+                maintenanceYear =
+                    datedMaintenanceRequests.Max(
+                        request =>
+                            request.RequestDate!.Value.Year);
+
+
+                var maintenanceByMonth =
+                    datedMaintenanceRequests
+                        .Where(
+                            request =>
+                                request.RequestDate!.Value.Year ==
+                                maintenanceYear)
+                        .GroupBy(
+                            request =>
+                                request.RequestDate!.Value.Month)
+                        .ToDictionary(
+                            group =>
+                                group.Key,
+                            group =>
+                                group.Sum(
+                                    request =>
+                                        request.Cost ??
+                                        0m));
+
+
+                monthlyMaintenance =
+                    Enumerable.Range(1, 12)
+                        .Select(
+                            month =>
+                                new MonthlyAmountItem
+                                {
+                                    Month =
+                                        new DateTime(
+                                            2000,
+                                            month,
+                                            1)
+                                        .ToString("MMM"),
+
+                                    Amount =
+                                        maintenanceByMonth
+                                            .TryGetValue(
+                                                month,
+                                                out var maintenanceAmount)
+                                                ? maintenanceAmount
+                                                : 0m
+                                })
+                        .ToList();
+            }
+            else
+            {
+                maintenanceYear =
+                    DateTime.Now.Year;
+
+
+                monthlyMaintenance =
+                    Enumerable.Range(1, 12)
+                        .Select(
+                            month =>
+                                new MonthlyAmountItem
+                                {
+                                    Month =
+                                        new DateTime(
+                                            2000,
+                                            month,
+                                            1)
+                                        .ToString("MMM"),
+
+                                    Amount =
+                                        0m
+                                })
+                        .ToList();
+            }
+
+
+            // -------------------------------------------------
+            // LOAD PROPERTIES
+            // -------------------------------------------------
+
+            var properties =
+                await db.Properties
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // Property type donut chart
+
+            propertyBreakdown =
+                properties
+                    .GroupBy(
+                        property =>
+                            property.PropertyType ??
+                            "Unknown")
+                    .Select(
+                        group =>
+                            new CategoryCountItem
+                            {
+                                Category =
+                                    group.Key,
+
+                                Count =
+                                    group.Count()
+                            })
+                    .OrderByDescending(
+                        item =>
+                            item.Count)
+                    .ToList();
+
+
+            // Top 10 properties by purchase price
+
+            topProperties =
+                properties
+                    .OrderByDescending(
+                        property =>
+                            property.PurchasePrice ??
+                            0)
+                    .Take(10)
+                    .Select(
+                        property =>
+                            new TopPropertyItem
+                            {
+                                Address =
+                                    property.Address,
+
+                                Location =
+                                    $"{property.City}, {property.State}",
+
+                                PropertyType =
+                                    property.PropertyType ??
+                                    "Unknown",
+
+                                PurchasePrice =
+                                    property.PurchasePrice ??
+                                    0,
+
+                                PurchasePriceText =
+                                    FormatUsd(
+                                        property.PurchasePrice ??
+                                        0)
+                            })
+                    .ToList();
+
+
+            // -------------------------------------------------
+            // LOAD OWNERS
+            // -------------------------------------------------
+
+            var owners =
+                await db.Owners
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            var propertyOwners =
+                await db.Set<MetDashboard.Data.Models.Propertyowner>()
+                    .AsNoTracking()
+                    .ToListAsync();
+
+
+            // Create a quick lookup:
+            // Property ID -> Purchase Price
+
+            var propertyPrices =
+                properties.ToDictionary(
+                    property =>
+                        property.PropertyId,
+                    property =>
+                        property.PurchasePrice ??
+                        0);
+
+
+            // Calculate each owner's share of portfolio value
+
+            topOwners =
+                owners
+                    .Select(
+                        owner =>
+                        {
+                            var ownershipRecords =
+                                propertyOwners
+                                    .Where(
+                                        record =>
+                                            record.OwnerId ==
+                                            owner.OwnerId)
+                                    .ToList();
+
+
+                            decimal portfolioValue =
+                                ownershipRecords.Sum(
+                                    record =>
+                                    {
+                                        var propertyValue =
+                                            propertyPrices
+                                                .GetValueOrDefault(
+                                                    record.PropertyId,
+                                                    0);
+
+
+                                        var ownershipPercentage =
+                                            record.OwnershipPercentage ??
+                                            0;
+
+
+                                        return propertyValue *
+                                               (ownershipPercentage / 100);
+                                    });
+
+
+                            return new OwnerPortfolioItem
+                            {
+                                OwnerName =
+                                    $"{owner.FirstName} {owner.LastName}",
+
+                                PropertyCount =
+                                    ownershipRecords.Count,
+
+                                PortfolioValue =
+                                    portfolioValue,
+
+                                PortfolioValueText =
+                                    FormatUsd(
+                                        portfolioValue)
+                            };
+                        })
+                    .OrderByDescending(
+                        owner =>
+                            owner.PortfolioValue)
+                    .Take(10)
+                    .ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                ex.Message;
+
+
+            Console.WriteLine(
+                $"Dashboard error: {ex}");
+        }
+        finally
+        {
+            isLoading =
+                false;
+        }
+    }
+
+
+    // =====================================================
+    // CURRENCY FORMAT
+    // =====================================================
+
+    private static string FormatUsd(
+        decimal amount)
+    {
+        return amount.ToString(
+            "C0",
+            CultureInfo.GetCultureInfo(
+                "en-US"));
+    }
+
+
+    private static string FormatChartCurrency(
+        object value)
+    {
+        var amount =
+            Convert.ToDecimal(
+                value,
+                CultureInfo.InvariantCulture);
+
+
+        if (Math.Abs(amount) >= 1_000_000m)
+        {
+            return $"${amount / 1_000_000m:0.#}M";
+        }
+
+
+        if (Math.Abs(amount) >= 1_000m)
+        {
+            return $"${amount / 1_000m:0.#}K";
+        }
+
+
+        return $"${amount:0}";
+    }
+
+
+    // =====================================================
+    // SMALL DASHBOARD DATA CLASSES
+    // =====================================================
+
+    private sealed class MonthlyAmountItem
+    {
+        public string Month { get; set; } =
+            "";
+
+        public decimal Amount { get; set; }
+    }
+
+
+    private sealed class CategoryCountItem
+    {
+        public string Category { get; set; } =
+            "";
+
+        public int Count { get; set; }
+    }
+
+
+    private sealed class TopPropertyItem
+    {
+        public string Address { get; set; } =
+            "";
+
+        public string Location { get; set; } =
+            "";
+
+        public string PropertyType { get; set; } =
+            "";
+
+        public decimal PurchasePrice { get; set; }
+
+        public string PurchasePriceText { get; set; } =
+            "";
+    }
+
+
+    private sealed class OwnerPortfolioItem
+    {
+        public string OwnerName { get; set; } =
+            "";
+
+        public int PropertyCount { get; set; }
+
+        public decimal PortfolioValue { get; set; }
+
+        public string PortfolioValueText { get; set; } =
+            "";
+    }
+}
+
+
+<style>
+
+    /* =====================================================
+           KPI CARDS
+           ===================================================== */
+
+    .dashboard-kpi-card {
+        min-height: 155px;
+        height: 100%;
+        overflow: hidden;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+        .dashboard-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
+        }
+
+    .dashboard-kpi-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        height: 100%;
+    }
+
+    .dashboard-kpi-text {
+        min-width: 0;
+    }
+
+    .dashboard-kpi-value {
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .dashboard-kpi-icon {
+        width: 46px;
+        height: 46px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+    }
+
+    .dashboard-kpi-icon-light {
+        color: #ffffff;
+        background-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .dashboard-kpi-icon-dark {
+        color: #1b6ec2;
+        background-color: #eff6ff;
+    }
+
+
+    /* =====================================================
+           DASHBOARD STATES
+           ===================================================== */
+
+    .dashboard-state-card {
+        width: 100%;
+        border: 1px solid #e5e7eb;
+    }
+
+    .dashboard-loading-state,
+    .dashboard-error-state {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        min-height: 72px;
+    }
+
+    .dashboard-state-title {
+        color: #1f2937;
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+
+    .dashboard-state-description {
+        margin-top: 0.2rem;
+        color: #6b7280;
+        font-size: 0.82rem;
+        line-height: 1.45;
+    }
+
+    .dashboard-error-card {
+        border-left: 4px solid #b91c1c;
+    }
+
+    .dashboard-error-state > .rz-icon {
+        flex-shrink: 0;
+        color: #b91c1c;
+    }
+
+
+    /* =====================================================
+           CONTENT CARDS
+           ===================================================== */
+
+    .dashboard-content-card {
+        height: 100%;
+        min-width: 0;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+
+    /* =====================================================
+           CHART CARDS
+           ===================================================== */
+
+    .dashboard-chart-card {
+        height: 100%;
+        min-width: 0;
+    }
+
+
+    /* =====================================================
+           CHARTS
+           ===================================================== */
+
+    .dashboard-chart {
+        width: 100%;
+        height: 350px;
+        min-width: 0;
+    }
+
+
+    /* =====================================================
+           EMPTY STATES
+           ===================================================== */
+
+    .dashboard-empty-state {
+        min-height: 260px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.65rem;
+        margin-top: 1rem;
+        padding: 2rem;
+        text-align: center;
+        color: #6b7280;
+        border: 1px dashed #d1d5db;
+        border-radius: 10px;
+        background-color: #f9fafb;
+    }
+
+        .dashboard-empty-state .rz-icon {
+            font-size: 2rem;
+            color: #9ca3af;
+        }
+
+    .dashboard-empty-title {
+        color: #374151;
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+
+    .dashboard-empty-description {
+        max-width: 380px;
+        font-size: 0.82rem;
+        line-height: 1.5;
+    }
+
+    .dashboard-empty-table {
+        min-height: 180px;
+        margin-top: 0;
+    }
+
+
+    /* =====================================================
+           DASHBOARD TABLES
+           ===================================================== */
+
+    .dashboard-table-scroll {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .dashboard-table {
+        width: 100%;
+    }
+
+
+    /* =====================================================
+           DASHBOARD HEADER
+           ===================================================== */
+
+    .dashboard-page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .dashboard-date-card {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-shrink: 0;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background-color: #ffffff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .dashboard-date-label {
+        margin-bottom: 0.1rem;
+        color: #6b7280;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+    }
+
+    .dashboard-date-value {
+        color: #1f2937;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+
+    /* =====================================================
+           DASHBOARD NAVIGATION
+           ===================================================== */
+
+    .dashboard-kpi-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        margin-top: 0.75rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+        .dashboard-kpi-link .rz-icon {
+            font-size: 1rem;
+            transition: transform 0.15s ease;
+        }
+
+        .dashboard-kpi-link:hover .rz-icon {
+            transform: translateX(3px);
+        }
+
+    .dashboard-kpi-link-light {
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+        .dashboard-kpi-link-light:hover {
+            color: #ffffff;
+        }
+
+    .dashboard-kpi-link-dark {
+        color: #1b6ec2;
+    }
+
+        .dashboard-kpi-link-dark:hover {
+            color: #1861ac;
+        }
+
+    .dashboard-section-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: #1b6ec2;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+        .dashboard-section-link:hover {
+            color: #1861ac;
+        }
+
+        .dashboard-section-link .rz-icon {
+            font-size: 1rem;
+            transition: transform 0.15s ease;
+        }
+
+        .dashboard-section-link:hover .rz-icon {
+            transform: translateX(3px);
+        }
+
+    .dashboard-section-action {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 0.75rem;
+    }
+
+
+    /* =====================================================
+           TABLET / MOBILE
+           ===================================================== */
+
+    @@media (max-width: 768px) {
+
+        .dashboard-page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .dashboard-date-card {
+            width: 100%;
+        }
+
+        .dashboard-loading-state,
+        .dashboard-error-state {
+            align-items: flex-start;
+        }
+
+        .dashboard-kpi-card:hover {
+            transform: none;
+        }
+
+        .dashboard-kpi-card {
+            min-height: 135px;
+        }
+
+        .dashboard-chart {
+            height: 300px;
+        }
+
+        .dashboard-empty-state {
+            min-height: 220px;
+            padding: 1.5rem;
+        }
+
+        .dashboard-empty-table {
+            min-height: 160px;
+        }
+
+        .dashboard-table {
+            min-width: 620px;
+        }
+
+        .dashboard-table-scroll {
+            padding-bottom: 0.25rem;
+        }
+    }
+
+
+    /* =====================================================
+           SMALL PHONE
+           ===================================================== */
+
+    @@media (max-width: 480px) {
+
+        .dashboard-kpi-card {
+            min-height: 125px;
+        }
+
+        .dashboard-chart {
+            height: 280px;
+        }
+
+        .dashboard-empty-state {
+            min-height: 200px;
+            padding: 1.25rem;
+        }
+    }
+
+</style>
