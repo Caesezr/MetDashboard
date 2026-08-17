@@ -1,0 +1,44 @@
+name: MetDashboard CI/CD
+
+on:
+  push:
+    branches:
+      - master
+
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and Publish .NET 10
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./MetDashboard.csproj
+
+      - name: Build application
+        run: dotnet build ./MetDashboard.csproj --configuration Release --no-restore
+
+      - name: Publish application
+        run: dotnet publish ./MetDashboard.csproj --configuration Release --no-build --output ./publish
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: metdashboard-release
+          path: ./publish
+          if-no-files-found: error
+          retention-days: 7
